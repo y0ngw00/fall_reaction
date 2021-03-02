@@ -172,6 +172,7 @@ PYBIND11_MODULE(SimEnv, m)
 {
 	py::class_<SimEnv>(m, "Env")
         .def(py::init<int, std::string, std::string>())
+		.def("GetNumState",&SimEnv::GetNumState)
 		.def("GetNumAction",&SimEnv::GetNumAction)
 		.def("Step",&SimEnv::Step)
 		.def("Reset",&SimEnv::Reset)

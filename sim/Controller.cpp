@@ -39,7 +39,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	mContacts.push_back("LeftToe");
 	mContacts.push_back("LeftFoot");
 
-	mInterestedDof = mCharacter->GetSkeleton()->getNumDofs() - 6;
+	mInterestedDof = mCharacter->GetSkeleton()->getNumDofs()-6;
 	mRewardDof = mCharacter->GetSkeleton()->getNumDofs();
 
 	auto collisionEngine = mWorld->getConstraintSolver()->getCollisionDetector();
@@ -575,7 +575,7 @@ Reset(bool RSI)
 {
 	this->mWorld->reset();
 	dart::dynamics::SkeletonPtr skel = mCharacter->GetSkeleton();
-	// skel->clearConstraintImpulses();
+	skel->clearConstraintImpulses();
 	skel->clearInternalForces();
 	skel->clearExternalForces();
 	//RSI

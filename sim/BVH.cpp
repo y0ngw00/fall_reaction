@@ -323,7 +323,7 @@ SetMotion(double t)
 	Eigen::Vector3d root_k1 = mMotions[k1].segment<3>(0);
 
 	mRootCOM.setZero();
-	mRootCOM = (root_k*(1-dt) + root_k1*dt - mRootCOM)*0.01;
+	mRootCOM = (root_k*(1-dt) + root_k1*dt - mRootCOMOffset)*0.01;
 	
 }
 
@@ -365,14 +365,10 @@ getBVHContainer() {
 
 JOINT* BVH::getJoint(std::string joint_name)
 {
-	std::map<std::string, JOINT*>::const_iterator  i = JointList.find(joint_name);
+	std::map<std::string, JOINT*>::iterator  i = JointList.find(joint_name);
 	JOINT* j = (i != JointList.end()) ? (*i).second : NULL;
 	if (j == NULL) {
-		std::map<std::string, JOINT*>::const_iterator  u = mMapping.find(joint_name);
-		JOINT* v = (u != mMapping.end()) ? (*u).second : NULL;
-		if (v==NULL)
 			std::cout << "JOINT <" << joint_name << "> is not loaded!\n";
-		j = v;
 	}
 	return j;
 }

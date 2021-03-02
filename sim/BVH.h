@@ -64,8 +64,8 @@ private:
     int num_frames;
     float mTimestep;
     int num_motion_channels;
-    Eigen::Vector3d mRootCOM;
-
+	Eigen::Vector3d mRootCOM;
+	Eigen::Vector3d mRootCOMOffset;
 public:
 	BVH();
 	BVH(std::string filename);

@@ -40,6 +40,36 @@ class PPO(object):
 		self.lambd = lambd
 		self.reward_max = 0
 
+	def initRun(self, pretrain, num_state, num_action, num_slaves=1):
+		self.pretrain = pretrain
+
+		self.num_slaves = num_slaves
+		self.num_action = num_action
+		self.num_state = num_state
+
+		config = tf.ConfigProto()
+		config.intra_op_parallelism_threads = self.num_slaves
+		config.inter_op_parallelism_threads = self.num_slaves
+		self.sess = tf.Session(config=config)
+		self.adaptive = False
+
+		#build network and optimizer
+		name = pretrain.split("/")[-2]
+		self.buildOptimize(name)
+		
+		save_list = [v for v in tf.trainable_variables() if v.name.find(name)!=-1]
+		self.saver = tf.train.Saver(var_list=save_list, max_to_keep=1)
+		
+		self.step = 0
+
+		if self.pretrain is not "":
+			self.load(self.pretrain)
+			li = pretrain.split("network")
+			suffix = li[-1]
+			self.RMS = RunningMeanStd(shape=(self.num_state))
+			self.RMS.load(li[0]+"network"+li[1]+'rms'+suffix)
+			self.RMS.setNumStates(self.num_state)
+
 	def initTrain(self, name, env, pretrain="", directory=None, 
 		batch_size=512, steps_per_iteration=4096, optim_frequency=1):
 
@@ -352,23 +382,29 @@ class PPO(object):
 
 
 			self.update(epi_info_iter) 
+
+
+			epi_info_iter = []
+
 			if self.learning_rate_actor > 1e-5:
 				self.learning_rate_actor = self.learning_rate_actor * self.learning_rate_decay
 
-			summary = self.env.printSummary()
-			self.printNetworkSummary()
-			if self.directory is not None:
-				self.save()
+			if it_cur % 5 == 4:
+				summary = self.env.printSummary()
+				self.printNetworkSummary()
+				if self.directory is not None:
+					self.save()
 
-			if self.directory is not None and self.reward_max < summary['r_per_e']:
-				self.reward_max = summary['r_per_e']
-				self.env.RMS.save(self.directory+'rms-rmax')
+				if self.directory is not None and self.reward_max < summary['r_per_e']:
+					self.reward_max = summary['r_per_e']
+					self.env.RMS.save(self.directory+'rms-rmax')
 
-				os.system("cp {}/network-{}.data-00000-of-00001 {}/network-rmax.data-00000-of-00001".format(self.directory, 0, self.directory))
-				os.system("cp {}/network-{}.index {}/network-rmax.index".format(self.directory, 0, self.directory))
-				os.system("cp {}/network-{}.meta {}/network-rmax.meta".format(self.directory, 0, self.directory))
+					os.system("cp {}/network-{}.data-00000-of-00001 {}/network-rmax.data-00000-of-00001".format(self.directory, 0, self.directory))
+					os.system("cp {}/network-{}.index {}/network-rmax.index".format(self.directory, 0, self.directory))
+					os.system("cp {}/network-{}.meta {}/network-rmax.meta".format(self.directory, 0, self.directory))
 
-			epi_info_iter = []
+
+
 
 	def run(self, state):
 		state = np.reshape(state, (1, self.num_state))

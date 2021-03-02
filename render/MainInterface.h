@@ -87,8 +87,10 @@ protected:
 	//p::object 						mRegression;
 	py::object 						mPPO;
 
+
+
 	bool render_bvh;
-	bool sim_bvh;
+	bool render_sim;
 
 	
 };

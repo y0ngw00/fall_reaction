@@ -7,7 +7,6 @@ MainInterface::
 MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 {
 
-
 	this->character_path = std::string(PROJECT_DIR)+std::string("/character/") + std::string(REF_CHARACTER_TYPE) + std::string(".xml");
 
 	this->frame_no = 0;
@@ -40,7 +39,7 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
         pos.push_back(p);
         phase += mReferenceManager->GetTimeStep(phase);
     }
-    UpdateMotion(pos, "bvh");
+    //UpdateMotion(pos, "bvh");
 
 	this->mCurFrame = 0;
 	//this->mTotalFrame = mReferenceManager->GetPhaseLength();
@@ -56,7 +55,7 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 	DPhy::SetSkeletonColor(mSkel, Eigen::Vector4d(164./255., 235./255.,	243./255., 1.0));
 
 	this->render_bvh = true;
-	this->sim_bvh = true;
+
 }
 
 void
@@ -71,9 +70,8 @@ display()
 	mCamera->viewupdate();
 
 	DrawGround();
-	
-	if(on_animation)
-		DrawSkeletons();
+
+	DrawSkeletons();
 	glutSwapBuffers();
 
 	//GUI::DrawStringOnScreen(0.8, 0.9, std::to_string(mCurFrame), true, Eigen::Vector3d::Zero());
@@ -82,11 +80,9 @@ void
 MainInterface::
 SetFrame(int n)
 {
-	//this->mSkel->setPositions(current_bvh[n]);
 	if(render_bvh)
 		mSkel->setPositions(mMotion_bvh[n]);
-
-	if(sim_bvh) 
+	if(render_sim) 
 		mSkel_sim->setPositions(mMotion_sim[n]);
 }
 
@@ -94,15 +90,13 @@ void
 MainInterface::
 DrawSkeletons()
 {
-
 	glPushMatrix();
 	glTranslated(0.0, 0, 0);
 	if(render_bvh)
 		GUI::DrawSkeleton(this->mSkel, 0);
-	if(sim_bvh)
+	if(render_sim)
 		GUI::DrawSkeleton(this->mSkel_sim, 0);
 	glPopMatrix();
-
 }	
 
 void
@@ -133,7 +127,6 @@ DrawGround()
 		}
 	}
 	glEnd();
-
 }
 
 void
@@ -141,7 +134,7 @@ MainInterface::
 initNetworkSetting(std::string ppo) {
 
     Py_Initialize();
-  //   try {
+    try {
   //   	if(reg != "") {
 		// 	p::object reg_main = p::import("regression");
 	 //        this->mRegression = reg_main.attr("Regression")();
@@ -158,6 +151,10 @@ initNetworkSetting(std::string ppo) {
     		this->mController = new DPhy::Controller(mReferenceManager, this->character_path,true); //adaptive=true, bool parametric=true, bool record=true
 			//mController->SetGoalParameters(mReferenceManager->GetParamCur());
 
+			py::object sys_module = py::module::import("sys");
+			py::str module_dir = (std::string(PROJECT_DIR)+"/network").c_str();
+			sys_module.attr("path").attr("insert")(1, module_dir);
+
     		py::object ppo_main = py::module::import("ppo");
 			this->mPPO = ppo_main.attr("PPO")();
 			std::string path = std::string(PROJECT_DIR)+ std::string("/network/output/") + ppo;
@@ -167,13 +164,14 @@ initNetworkSetting(std::string ppo) {
 			RunPPO();
     	}
     
-  //   } catch (const p::error_already_set&) {
-  //       PyErr_Print();
-  //   }    
+    } catch (const py::error_already_set&) {
+        PyErr_Print();
+    }    
 }
 void
 MainInterface::
 RunPPO() {
+	this->render_sim = true;
 	std::vector<Eigen::VectorXd> pos_bvh;
 	std::vector<Eigen::VectorXd> pos_reg;
 	std::vector<Eigen::VectorXd> pos_sim;
@@ -186,9 +184,8 @@ RunPPO() {
 
 	while(!this->mController->IsTerminalState()) {
 		Eigen::VectorXd state = this->mController->GetState();
-
 		py::array_t<double> na = this->mPPO.attr("run")(DPhy::toNumPyArray(state));
-		Eigen::VectorXd action = DPhy::toEigenVector(na,this->mController->GetNumAction());
+		Eigen::VectorXd action = DPhy::toEigenVector(na, this->mController->GetNumAction());
 
 		this->mController->SetAction(action);
 		this->mController->Step();
@@ -202,6 +199,7 @@ RunPPO() {
 		Eigen::VectorXd position = this->mController->GetPositions(i);
 		//Eigen::VectorXd position_reg = this->mController->GetTargetPositions(i);
 		Eigen::VectorXd position_bvh = this->mController->GetBVHPositions(i);
+		position_bvh[3]-=1.5;
 
 		//Eigen::VectorXd position_obj = this->mController->GetObjPositions(i);
 
@@ -213,7 +211,7 @@ RunPPO() {
 	// Eigen::VectorXd root_bvh = mReferenceManager->GetPosition(0, false);
 	// pos_sim =  DPhy::Align(pos_sim, root_bvh);
 	// pos_reg =  DPhy::Align(pos_reg, root_bvh);
-	// UpdateMotion(pos_bvh, "bvh");
+	UpdateMotion(pos_bvh, "bvh");
 	UpdateMotion(pos_sim, "sim");
 	//UpdateMotion(pos_reg, "reg");
 
@@ -321,14 +319,15 @@ keyboard(unsigned char key, int mx, int my)
 		exit(0);
 
 	if (key == ' ') {
-        on_animation = true;
-        //current_bvh = mCharacter->getBVH();
-        //current_bvh = bvh_normal[motion_type];
+		if(!on_animation)
+        	on_animation = true;
+        else if(on_animation)
+        	on_animation = false;
     }
     if (key == '1') 
 		this->render_bvh = (this->render_bvh == false);
 	if (key == '2')
-		this->sim_bvh = (this->sim_bvh == false);
+		this->render_sim = (this->render_sim == false);
 	if (key == 'r')
 		Reset();
 	// // change animation mode
@@ -417,11 +416,12 @@ Timer(int value)
 	//double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()/1000000.;
 
 
-	if( on_animation && this->mCurFrame < this->mTotalFrame - 1){
+	if(on_animation && this->mCurFrame < this->mTotalFrame - 1){
         this->mCurFrame++;
         SetFrame(this->mCurFrame);
         	
     }
+    SetFrame(this->mCurFrame);
 	std::chrono::steady_clock::time_point end= std::chrono::steady_clock::now();
 	double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()/1000.;
 	
