@@ -36,15 +36,12 @@ LoadMotionFromBVH(std::string filename)
 	mMotions_phase.clear();
 	mMotions_gen.clear();
 
-	this->mCharacter->LoadBVHMap();
-
 	std::string path = std::string(PROJECT_DIR) + filename;
 	BVH* bvh = new DPhy::BVH(path);
 	if(!bvh->IsLoadSuccess()){
 		std::cout<<"Loading bvh is failed from : "<< path << std::endl;
 		return;
 	}
-	this->mCharacter->LoadSkelMap();
 
 	std::cout << "load trained data from: " << path << std::endl;
 

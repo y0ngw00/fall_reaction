@@ -89,8 +89,8 @@ protected:
 
 
 
-	bool render_bvh;
-	bool render_sim;
+	bool render_bvh=false;
+	bool render_sim=false;
 
 	
 };

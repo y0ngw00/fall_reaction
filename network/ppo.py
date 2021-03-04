@@ -284,8 +284,9 @@ class PPO(object):
 				varlist.append(key)
 				var_value.append(reader.get_tensor(key))
 			return (varlist, var_value)
-
+		print(1)
 		saved_variables, saved_values = get_tensors_in_checkpoint_file(path)
+		print(2)
 		saved_dict = {n : v for n, v in zip(saved_variables, saved_values)}
 		restore_op = []
 		for v in tf.trainable_variables():

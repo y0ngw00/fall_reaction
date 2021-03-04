@@ -39,22 +39,34 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
         pos.push_back(p);
         phase += mReferenceManager->GetTimeStep(phase);
     }
-    //UpdateMotion(pos, "bvh");
+    UpdateMotion(pos, "bvh");
 
 	this->mCurFrame = 0;
 	//this->mTotalFrame = mReferenceManager->GetPhaseLength();
 	this->mTotalFrame = 1000;
 
+	if(bvh!=""){
+		this->mSkel = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
+		DPhy::SetSkeletonColor(mSkel, Eigen::Vector4d(164./255., 235./255.,	243./255., 1.0));
+
+		this->render_bvh = true;
+
+	}
 	
-	this->mSkel = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
-	this->mSkel_sim = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
 
+	if(ppo!=""){
+		
+		this->mSkel_sim = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
 
+		DPhy::SetSkeletonColor(mSkel, Eigen::Vector4d(164./255., 235./255.,	13./255., 1.0));
 
-	initNetworkSetting(ppo);
-	DPhy::SetSkeletonColor(mSkel, Eigen::Vector4d(164./255., 235./255.,	243./255., 1.0));
+		initNetworkSetting(ppo);
+		this->render_sim=true;
+		
+	}
+	
+	
 
-	this->render_bvh = true;
 
 }
 
