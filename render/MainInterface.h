@@ -57,8 +57,10 @@ protected:
 	std::string character_path;
 
 	dart::dynamics::SkeletonPtr 	mSkel;
-	dart::dynamics::SkeletonPtr 	mSkel_reg;
 	dart::dynamics::SkeletonPtr 	mSkel_sim;
+
+	dart::dynamics::SkeletonPtr 	mObj_1;
+	dart::dynamics::SkeletonPtr 	mObj_2;
 
 	int     drag_mouse_r;
 	int     drag_mouse_l;
@@ -89,8 +91,8 @@ protected:
 
 
 
-	bool render_bvh;
-	bool render_sim;
+	bool render_bvh=false;
+	bool render_sim=false;
 
 	
 };

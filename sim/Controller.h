@@ -77,6 +77,8 @@ public:
 
 	void SaveDisplayedData(std::string directory, bool bvh);
 
+	const dart::dynamics::SkeletonPtr& GetObjectPtr(){return mObject;}
+
 
 
 protected:
@@ -86,6 +88,9 @@ protected:
 	ReferenceManager* mReferenceManager;
 	int id;
 	std::string mPath;
+
+	dart::dynamics::SkeletonPtr mObject;
+	dart::dynamics::SkeletonPtr mObject2;
 
 	double w_p,w_v,w_com,w_ee;
 
@@ -131,7 +136,7 @@ protected:
 	std::vector<std::string> mEndEffectors;
 	std::vector<std::string> mRewardLabels;
 
-	std::unique_ptr<dart::collision::CollisionGroup> mCGEL, mCGER, mCGL, mCGR, mCGG, mCGHR, mCGHL, mCGOBJ; 
+	std::unique_ptr<dart::collision::CollisionGroup> mCGEL, mCGER, mCGL, mCGR, mCGG, mCGHR, mCGHL, mCGOBJ, mCGOBJ2; 
 
 	double mAdaptiveStep;
 	int mRewardDof;
@@ -150,6 +155,10 @@ protected:
 	Eigen::Vector3d mStartRoot; //root 0th frame
 	Eigen::Vector3d mRootZeroDiff; //root 0th frame
 	Eigen::Vector3d mStartFoot; //middle of two feet at 0th frame
+
+	Eigen::Vector3d target_pt;
+	int path_knot;
+
 
 
 

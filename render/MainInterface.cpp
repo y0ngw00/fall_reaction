@@ -39,7 +39,8 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
         pos.push_back(p);
         phase += mReferenceManager->GetTimeStep(phase);
     }
-    //UpdateMotion(pos, "bvh");
+
+	UpdateMotion(pos, "bvh");
 
 	this->mCurFrame = 0;
 	//this->mTotalFrame = mReferenceManager->GetPhaseLength();
@@ -47,14 +48,57 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 
 	
 	this->mSkel = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
-	this->mSkel_sim = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
-
-
-
-	initNetworkSetting(ppo);
 	DPhy::SetSkeletonColor(mSkel, Eigen::Vector4d(164./255., 235./255.,	243./255., 1.0));
-
 	this->render_bvh = true;
+
+	if(ppo != "")
+	{
+		this->mSkel_sim = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
+		DPhy::SetSkeletonColor(mSkel_sim, Eigen::Vector4d(244./255., 235./255.,	13./255., 1.0));
+		initNetworkSetting(ppo);
+		this->render_sim = true;
+
+	}
+
+
+	// #ifdef OBJECT_TYPE 
+	// 	this-> mObj_1 = dart::dynamics::Skeleton::create("Jump_Box");
+	// 	auto bn_1 = mObj_1->getBodyNode("Jump_Box");
+
+	// 	Eigen::Isometry3d jointPosition_1;
+	// 	jointPosition_1.setIdentity();
+	// 	jointPosition_1.translation()<<0, 0, 0;
+
+	// 	Eigen::Isometry3d bodyPosition_1;
+	// 	bodyPosition_1.setIdentity();
+	// 	bodyPosition_1.translation()<<0, 0.45, 0;
+
+	// 	DPhy::SkeletonBuilder::MakeWeldJointBody("Jump_Box",mObj_1,bn_1,Eigen::Vector3d(0.8, 0.90, 0.8),jointPosition_1
+	// 											,bodyPosition_1,500.0,true);
+
+
+	// #endif
+
+	// #ifdef OBJECT_TYPE2
+		
+	// 	this-> mObj_2 = dart::dynamics::Skeleton::create("Jump_Box");
+	// 	auto bn = mObj_2->getBodyNode("Jump_Box");
+
+	// 	Eigen::Isometry3d jointPosition;
+	// 	jointPosition.setIdentity();
+	// 	jointPosition.translation()<<0, 0, 0;
+
+	// 	Eigen::Isometry3d bodyPosition;
+	// 	bodyPosition.setIdentity();
+	// 	bodyPosition.translation()<<0, 0.225, 8;
+
+	// 	DPhy::SkeletonBuilder::MakeWeldJointBody("Jump_Box",mObj_2,bn,Eigen::Vector3d(0.8, 0.45, 0.8),jointPosition
+	// 											,bodyPosition,500.0,true);	
+
+	// #endif
+
+
+
 
 }
 
@@ -70,16 +114,17 @@ display()
 	mCamera->viewupdate();
 
 	DrawGround();
-
 	DrawSkeletons();
+
 	glutSwapBuffers();
 
-	//GUI::DrawStringOnScreen(0.8, 0.9, std::to_string(mCurFrame), true, Eigen::Vector3d::Zero());
+	GUI::DrawStringOnScreen(0.8, 0.9, std::to_string(mCurFrame), true, Eigen::Vector3d::Zero());
 }
 void
 MainInterface::
 SetFrame(int n)
 {
+
 	if(render_bvh)
 		mSkel->setPositions(mMotion_bvh[n]);
 	if(render_sim) 
@@ -96,6 +141,13 @@ DrawSkeletons()
 		GUI::DrawSkeleton(this->mSkel, 0);
 	if(render_sim)
 		GUI::DrawSkeleton(this->mSkel_sim, 0);
+
+	#ifdef OBJECT_TYPE
+		GUI::DrawSkeleton(this->mObj_1, 0);
+	#endif
+	#ifdef OBJECT_TYPE2
+		GUI::DrawSkeleton(this->mObj_2, 0);
+	#endif
 	glPopMatrix();
 }	
 
@@ -147,9 +199,11 @@ initNetworkSetting(std::string ppo) {
 		// //	mRegressionMemory->SaveContinuousParamSpace(path + "param_cspace");
   //   	}
     	if(ppo != "") {
+
     		//if (reg!="") this->mController = new DPhy::Controller(mReferenceManager, true, true, true);
     		this->mController = new DPhy::Controller(mReferenceManager, this->character_path,true); //adaptive=true, bool parametric=true, bool record=true
 			//mController->SetGoalParameters(mReferenceManager->GetParamCur());
+			std::cout<<0<<std::endl;
 
 			py::object sys_module = py::module::import("sys");
 			py::str module_dir = (std::string(PROJECT_DIR)+"/network").c_str();
@@ -158,9 +212,12 @@ initNetworkSetting(std::string ppo) {
     		py::object ppo_main = py::module::import("ppo");
 			this->mPPO = ppo_main.attr("PPO")();
 			std::string path = std::string(PROJECT_DIR)+ std::string("/network/output/") + ppo;
+			std::cout<<1<<std::endl;
+
 			this->mPPO.attr("initRun")(path,
 									   this->mController->GetNumState(), 
 									   this->mController->GetNumAction());
+			std::cout<<2<<std::endl;
 			RunPPO();
     	}
     
@@ -171,7 +228,7 @@ initNetworkSetting(std::string ppo) {
 void
 MainInterface::
 RunPPO() {
-	this->render_sim = true;
+
 	std::vector<Eigen::VectorXd> pos_bvh;
 	std::vector<Eigen::VectorXd> pos_reg;
 	std::vector<Eigen::VectorXd> pos_sim;
@@ -193,7 +250,7 @@ RunPPO() {
 		
 		count += 1;
 	}
-
+	std::cout<<3<<std::endl;
 	for(int i = 0; i <= count; i++) {
 
 		Eigen::VectorXd position = this->mController->GetPositions(i);
@@ -208,6 +265,7 @@ RunPPO() {
 		pos_bvh.push_back(position_bvh);
 		
 	}
+	std::cout<<4<<std::endl;
 	// Eigen::VectorXd root_bvh = mReferenceManager->GetPosition(0, false);
 	// pos_sim =  DPhy::Align(pos_sim, root_bvh);
 	// pos_reg =  DPhy::Align(pos_reg, root_bvh);
@@ -418,7 +476,6 @@ Timer(int value)
 
 	if(on_animation && this->mCurFrame < this->mTotalFrame - 1){
         this->mCurFrame++;
-        SetFrame(this->mCurFrame);
         	
     }
     SetFrame(this->mCurFrame);

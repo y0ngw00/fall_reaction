@@ -16,5 +16,6 @@
 #define CHARACTER_TYPE "mxm_t3"
 #define REF_CHARACTER_TYPE "mxm_t3"
 
-#define OBJECT_TYPE "up_box"
+// #define OBJECT_TYPE "jump_box"
+// #define OBJECT_TYPE2 "jump_box"
 #endif

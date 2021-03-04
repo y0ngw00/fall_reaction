@@ -36,7 +36,7 @@ LoadMotionFromBVH(std::string filename)
 	mMotions_phase.clear();
 	mMotions_gen.clear();
 
-	this->mCharacter->LoadBVHMap();
+	this->mCharacter->LoadSkelMap();
 
 	std::string path = std::string(PROJECT_DIR) + filename;
 	BVH* bvh = new DPhy::BVH(path);

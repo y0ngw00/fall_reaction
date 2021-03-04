@@ -46,7 +46,7 @@ int main(int argc, char ** argv)
        	}
     }
 
-	glutInit(&argc, argv);	
+	glutInit(&argc, argv);
 	MainInterface* interface = new MainInterface(bvh, ppo);
     interface->GLInitWindow("Motion Control");
 	glutMainLoop();

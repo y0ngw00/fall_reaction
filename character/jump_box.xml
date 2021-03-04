@@ -1,6 +1,6 @@
 <Skeleton name="Jump_Box">
-	<Joint type="FreeJoint" name="Jump_Box" parent_name="None" size="0.8 0.46 0.8" mass="500.0">
-		<BodyPosition linear="1 0 0 0 1 0 0 0 1" translation="0 0.23 0.9"></BodyPosition>
+	<Joint type="FreeJoint" name="Jump_Box" parent_name="None" size="0.8 0.90 0.8" mass="500.0">
+		<BodyPosition linear="1 0 0 0 1 0 0 0 1" translation="0 0.45 0"></BodyPosition>
 		<JointPosition linear="1 0 0 0 1 0 0 0 1" translation="0 0 0"></JointPosition>
 	</Joint>
 </Skeleton>

@@ -27,7 +27,7 @@ GLInitWindow(const char* _name)
 	//glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_MULTISAMPLE | GLUT_ACCUM);
 	glutInitWindowSize(640, 640);
 	glutInitWindowPosition(0, 0);
-	mWinIDs.push_back(glutCreateWindow("Forward and Inverse Kinematics"));
+	mWinIDs.push_back(glutCreateWindow(_name));
 	glutDisplayFunc(DisplayEvent);
 	glutReshapeFunc(ReshapeEvent);
 	glutKeyboardFunc(KeyboardEvent);
