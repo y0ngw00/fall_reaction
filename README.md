@@ -1,5 +1,5 @@
 # dmm
-* Training
+* Training :
 ppo.py
-* Render
+* Render :
 motion_ctr.cpp
