@@ -2,4 +2,4 @@
 * Training :
 ppo.py
 * Render :
-motion_ctr.cpp
+./motion_ctr --ref <***.bvh> --ppo <***/network-0>
