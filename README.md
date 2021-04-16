@@ -1,5 +1,5 @@
 # dmm
 * Training :
-ppo.py
+ppo.py --ref ***.bvh --
 * Render :
-./motion_ctr --ref <***.bvh> --ppo <***/network-0>
+./motion_ctr --ref ***.bvh --ppo ***/network-0
