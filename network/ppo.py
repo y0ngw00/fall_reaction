@@ -46,39 +46,28 @@ class PPO(object):
 		self.num_slaves = num_slaves
 		self.num_action = num_action
 		self.num_state = num_state
-		print(0)
 		config = tf.ConfigProto()
 		config.intra_op_parallelism_threads = self.num_slaves
 		config.inter_op_parallelism_threads = self.num_slaves
 		self.sess = tf.Session(config=config)
 		self.adaptive = False
-		print(0)
 		#build network and optimizer
 		name = pretrain.split("/")[-2]
 		self.buildOptimize(name)
-		print(0)
 		save_list = [v for v in tf.trainable_variables() if v.name.find(name)!=-1]
 		self.saver = tf.train.Saver(var_list=save_list, max_to_keep=1)
 		
 		self.step = 0
-		print(0)
 		if self.pretrain is not "":
-			print(1)
 			self.load(self.pretrain)
-			print(1)
 			li = pretrain.split("network")
-			print(1)
 			suffix = li[-1]
-			print(1)
 			self.RMS = RunningMeanStd(shape=(self.num_state))
-			print(1)
 			self.RMS.load(li[0]+"network"+li[1]+'rms'+suffix)
-			print(1)
 			self.RMS.setNumStates(self.num_state)
-		print(0)
 
 	def initTrain(self, name, env, pretrain="", directory=None, 
-		batch_size=512, steps_per_iteration=4096, optim_frequency=1):
+		batch_size=512, steps_per_iteration=4096, optim_frequency=5):
 
 		self.name = name
 		self.directory = directory
@@ -281,7 +270,6 @@ class PPO(object):
 
 	def load(self, path):
 		print("Loading parameters from {}".format(path))
-		print(9)
 		def get_tensors_in_checkpoint_file(file_name):
 			varlist=[]
 			var_value =[]
@@ -291,9 +279,7 @@ class PPO(object):
 				varlist.append(key)
 				var_value.append(reader.get_tensor(key))
 			return (varlist, var_value)
-		print(9)
 		saved_variables, saved_values = get_tensors_in_checkpoint_file(path)
-		print(9)
 		saved_dict = {n : v for n, v in zip(saved_variables, saved_values)}
 		restore_op = []
 		
@@ -323,7 +309,6 @@ class PPO(object):
 					saved_v = np.concatenate((saved_v, new_v), axis=1)
 					restore_op.append(v.assign(saved_v))
 					print("Restore {}, add {} output nodes".format(v.name[:-2], l))
-		print(9)
 		restore_op = tf.group(*restore_op)
 		self.sess.run(restore_op)
 

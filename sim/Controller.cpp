@@ -97,8 +97,6 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 
 	this->target_pt << 0, 0,8;
 
-
-
 }
 
 void 
@@ -114,44 +112,44 @@ initPhysicsEnv()
 	this->mGround->getBodyNode(0)->setFrictionCoeff(1.0);
 	this->mWorld->addSkeleton(this->mGround);
 
-	// #ifdef OBJECT_TYPE 
-	// 	this-> mObject = dart::dynamics::Skeleton::create("Jump_Box");
-	// 	auto bn_1 = mObject->getBodyNode("Jump_Box");
+	#ifdef OBJECT_TYPE 
+		this-> mObject = dart::dynamics::Skeleton::create("Jump_Box");
+		auto bn_1 = mObject->getBodyNode("Jump_Box");
 
-	// 	Eigen::Isometry3d jointPosition_1;
-	// 	jointPosition_1.setIdentity();
-	// 	jointPosition_1.translation()<<0, 0, 0;
+		Eigen::Isometry3d jointPosition_1;
+		jointPosition_1.setIdentity();
+		jointPosition_1.translation()<<0, 0, 0;
 
-	// 	Eigen::Isometry3d bodyPosition_1;
-	// 	bodyPosition_1.setIdentity();
-	// 	bodyPosition_1.translation()<<0, 0.45, 0;
+		Eigen::Isometry3d bodyPosition_1;
+		bodyPosition_1.setIdentity();
+		bodyPosition_1.translation()<<0, 0.582, -0.2;
 
-	// 	DPhy::SkeletonBuilder::MakeWeldJointBody("Jump_Box",mObject,bn_1,Eigen::Vector3d(0.8, 0.90, 0.8),jointPosition_1
-	// 											,bodyPosition_1,500.0,true);	
-	// 	this->mWorld->addSkeleton(this->mObject);
-	// 	this->mObject->getSkeleton()->getBodyNode(0)->setFrictionCoeff(1.0);
+		DPhy::SkeletonBuilder::MakeWeldJointBody("Jump_Box",mObject,bn_1,Eigen::Vector3d(0.8, 1.164, 0.8),jointPosition_1
+												,bodyPosition_1,500.0,true);	
+		this->mWorld->addSkeleton(this->mObject);
+		this->mObject->getSkeleton()->getBodyNode(0)->setFrictionCoeff(1.0);
 
 
-	// #endif
+	#endif
 
-	// #ifdef OBJECT_TYPE2
-	// 	this-> mObject2 = dart::dynamics::Skeleton::create("Jump_Box2");
-	// 	auto bn_2 = mObject->getBodyNode("Jump_Box2");
+	#ifdef OBJECT_TYPE2
+		this-> mObject2 = dart::dynamics::Skeleton::create("Jump_Box2");
+		auto bn_2 = mObject->getBodyNode("Jump_Box2");
 
-	// 	Eigen::Isometry3d jointPosition_2;
-	// 	jointPosition_2.setIdentity();
-	// 	jointPosition_2.translation()<<0, 0, 0;
+		Eigen::Isometry3d jointPosition_2;
+		jointPosition_2.setIdentity();
+		jointPosition_2.translation()<<0, 0, 0;
 
-	// 	Eigen::Isometry3d bodyPosition_2;
-	// 	bodyPosition_2.setIdentity();
-	// 	bodyPosition_2.translation()<<0, 0.225, this->target_pt[2];
-	// 	DPhy::SkeletonBuilder::MakeWeldJointBody("Jump_Box2",mObject2,bn_2,Eigen::Vector3d(0.8, 0.45, 0.8),jointPosition_2
-	// 											,bodyPosition_2,500.0,true);
+		Eigen::Isometry3d bodyPosition_2;
+		bodyPosition_2.setIdentity();
+		bodyPosition_2.translation()<<0, 0.29, 5.85;
+		DPhy::SkeletonBuilder::MakeWeldJointBody("Jump_Box2",mObject2,bn_2,Eigen::Vector3d(0.8, 0.58, 0.8),jointPosition_2
+												,bodyPosition_2,500.0,true);
 	
-	// 	this->mWorld->addSkeleton(this->mObject2);
-	// 	this->mObject2->getSkeleton()->getBodyNode(0)->setFrictionCoeff(1.0);
+		this->mWorld->addSkeleton(this->mObject2);
+		this->mObject2->getSkeleton()->getBodyNode(0)->setFrictionCoeff(1.0);
 
-	// #endif 
+	#endif 
 	
 
 }
@@ -187,6 +185,7 @@ Step()
 
 	Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
 	Eigen::VectorXd p_now = p_v_target->GetPosition();
+
 	this->mTargetPositions = p_now ; //p_v_target->GetPosition();
 	this->mTargetVelocities = mCharacter->GetSkeleton()->getPositionDifferences(mTargetPositions, mPrevTargetPositions) / 0.033;
 	delete p_v_target;
@@ -442,6 +441,7 @@ UpdateReward()
 
 	mRewardParts.clear();
 	double r_tot = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[2] * tracking_rewards_bvh[3])  + 0.05 * tracking_rewards_bvh[4];
+	//double r_tot = 0.9 * (0.5 * tracking_rewards_bvh[0] + 0.1 * tracking_rewards_bvh[1] + 0.3 * tracking_rewards_bvh[2] + 0.1 * tracking_rewards_bvh[3] ) + 0.1 * tracking_rewards_bvh[4];
 	if(dart::math::isNan(r_tot)){
 		mRewardParts.resize(mRewardLabels.size(), 0.0);
 	}
@@ -518,116 +518,48 @@ Eigen::VectorXd
 Controller::
 GetState()
 {
-	// // State Component : Joint_angle, Joint_velocity, up_vector_angle, p_next,
-	// if(mIsTerminal && terminationReason != 8){
-	// 	return Eigen::VectorXd::Zero(mNumState);
-	// }
-
-
-	// dart::dynamics::SkeletonPtr skel = mCharacter->GetSkeleton();
-	
-	// double root_height = skel->getRootBodyNode()->getCOM()[1];
-
-
-
-	// Eigen::VectorXd p_save = skel->getPositions();
-	// Eigen::VectorXd v_save = skel->getVelocities();
-	// Eigen::VectorXd p,v;
-	// // p.resize(p_save.rows()-6);
-	// // p = p_save.tail(p_save.rows()-6);
-	// #ifdef OBJECT_TYPE
-	// 	Eigen::VectorXd heightMap(path_knot);
-	// 	Eigen::Vector3d initial_pos = p_save.segment(3,3);
-	// 	Eigen::Vector3d location = target_pt - initial_pos;
-
-	// 	location[1]=0;	
-	// 	for(int i=0; i<path_knot; i++){
-	// 		Eigen::Vector3d knots = initial_pos + location*i/path_knot;
-	// 		heightMap[i] = 0;
-
-	// 			Eigen::Vector3d obj_pos(0,0,0);
-	// 			float a = abs(obj_pos[0]-knots[0]);
-	// 			float b = abs(obj_pos[2]-knots[2]);
-
-	// 			if(a < 0.4 &&b < 0.4){
-	// 				heightMap[i]=obj_pos[1];
-	// 			}
-	// 		#endif
-	// 		#ifdef OBJECT_TYPE2
-	// 			Eigen::Vector3d obj_pos2(0,0,8);
-	// 			if((std::abs(obj_pos2[0]-knots[0]) < 0.4)&&(std::abs(obj_pos2[2]-knots[2]) < 0.4))
-	// 				heightMap[i]=obj_pos2[1];
-	// 	}
-	// #endif
-
-
-	// int n_bnodes = mCharacter->GetSkeleton()->getNumBodyNodes();
-	// int num_p = (n_bnodes - 1) * 6;
-	// p.resize(num_p);
-
-	// for(int i = 1; i < n_bnodes; i++){
-	// 	Eigen::Isometry3d transform = skel->getBodyNode(i)->getRelativeTransform();
-	// 	// Eigen::Quaterniond q(transform.linear());
-	// 	//	ret.segment<6>(6*i) << rot, transform.translation();
-	// 	p.segment<6>(6*(i-1)) << transform.linear()(0,0), transform.linear()(0,1), transform.linear()(0,2),
-	// 							 transform.linear()(1,0), transform.linear()(1,1), transform.linear()(1,2);
-	// }
-
-	// v = v_save;
-
-	// dart::dynamics::BodyNode* root = skel->getRootBodyNode();
-	// Eigen::Isometry3d cur_root_inv = root->getWorldTransform().inverse();
-
-	// Eigen::Vector3d up_vec = root->getTransform().linear()*Eigen::Vector3d::UnitY();
-	// double up_vec_angle = atan2(std::sqrt(up_vec[0]*up_vec[0]+up_vec[2]*up_vec[2]),up_vec[1]);
-
-	// // The angles and velocity of end effector & root info
-	// Eigen::VectorXd ee;
-	// ee.resize(mEndEffectors.size()*3);
-	// for(int i=0;i<mEndEffectors.size();i++)
-	// {
-	// 	Eigen::Isometry3d transform = cur_root_inv * skel->getBodyNode(mEndEffectors[i])->getWorldTransform();
-	// 	ee.segment<3>(3*i) << transform.translation();
-	// }
-	// double t = mReferenceManager->GetTimeStep(mCurrentFrameOnPhase);
-
-	// Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame+t);
-	// Eigen::VectorXd p_now = p_v_target->GetPosition();
-	// // The rotation and translation of end effector in the future(future 1 frame)
-	// Eigen::VectorXd p_next = GetEndEffectorStatePosAndVel(p_now, p_v_target->GetVelocity()*t);
-	
-	// delete p_v_target;
-
-	// double phase = ((int) mCurrentFrame % mReferenceManager->GetPhaseLength()) / (double) mReferenceManager->GetPhaseLength();
-	// Eigen::VectorXd state;
-
-	// double com_diff = 0;
-	
-
-
-	// #ifdef OBJECT_TYPE
-	// 	state.resize(p.rows()+v.rows()+1+1+p_next.rows()+ee.rows()+2 + path_knot);
-	// 	state<< p, v, up_vec_angle, root_height, p_next, ee, mCurrentFrameOnPhase, heightMap;
-	// #endif
-	// #ifndef OBJECT_TYPE
-	// 	state.resize(p.rows()+v.rows()+1+1+p_next.rows()+ee.rows()+2);
-	// 	state<< p, v, up_vec_angle, root_height, p_next, mAdaptiveStep, ee, mCurrentFrameOnPhase;
-	// #endif
-
-	// return state;
-
+	// State Component : Joint_angle, Joint_velocity, up_vector_angle, p_next,
 	if(mIsTerminal && terminationReason != 8){
 		return Eigen::VectorXd::Zero(mNumState);
 	}
+
+
 	dart::dynamics::SkeletonPtr skel = mCharacter->GetSkeleton();
 	
 	double root_height = skel->getRootBodyNode()->getCOM()[1];
+
+
 
 	Eigen::VectorXd p_save = skel->getPositions();
 	Eigen::VectorXd v_save = skel->getVelocities();
 	Eigen::VectorXd p,v;
 	// p.resize(p_save.rows()-6);
 	// p = p_save.tail(p_save.rows()-6);
+	#ifdef OBJECT_TYPE
+		Eigen::VectorXd heightMap(path_knot);
+		Eigen::Vector3d initial_pos = p_save.segment(3,3);
+		Eigen::Vector3d location = target_pt - initial_pos;
+
+		location[1]=0;	
+		for(int i=0; i<path_knot; i++){
+			Eigen::Vector3d knots = initial_pos + location*i/path_knot;
+			heightMap[i] = 0;
+
+				Eigen::Vector3d obj_pos(0,0,0);
+				float a = abs(obj_pos[0]-knots[0]);
+				float b = abs(obj_pos[2]-knots[2]);
+
+				if(a < 0.4 &&b < 0.4){
+					heightMap[i]=obj_pos[1];
+				}
+			#endif
+			#ifdef OBJECT_TYPE2
+				Eigen::Vector3d obj_pos2(0,0,8);
+				if((std::abs(obj_pos2[0]-knots[0]) < 0.4)&&(std::abs(obj_pos2[2]-knots[2]) < 0.4))
+					heightMap[i]=obj_pos2[1];
+		}
+	#endif
+
 
 	int n_bnodes = mCharacter->GetSkeleton()->getNumBodyNodes();
 	int num_p = (n_bnodes - 1) * 6;
@@ -645,6 +577,11 @@ GetState()
 
 	dart::dynamics::BodyNode* root = skel->getRootBodyNode();
 	Eigen::Isometry3d cur_root_inv = root->getWorldTransform().inverse();
+
+	Eigen::Vector3d up_vec = root->getTransform().linear()*Eigen::Vector3d::UnitY();
+	double up_vec_angle = atan2(std::sqrt(up_vec[0]*up_vec[0]+up_vec[2]*up_vec[2]),up_vec[1]);
+
+	// The angles and velocity of end effector & root info
 	Eigen::VectorXd ee;
 	ee.resize(mEndEffectors.size()*3);
 	for(int i=0;i<mEndEffectors.size();i++)
@@ -656,21 +593,29 @@ GetState()
 
 	Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame+t);
 	Eigen::VectorXd p_now = p_v_target->GetPosition();
+	// The rotation and translation of end effector in the future(future 1 frame)
 	Eigen::VectorXd p_next = GetEndEffectorStatePosAndVel(p_now, p_v_target->GetVelocity()*t);
-	// Eigen::VectorXd p_next = GetEndEffectorStatePosAndVel(p_v_target->GetPosition(), p_v_target->GetVelocity()*t);
-
+	
 	delete p_v_target;
 
-	Eigen::Vector3d up_vec = root->getTransform().linear()*Eigen::Vector3d::UnitY();
-	double up_vec_angle = atan2(std::sqrt(up_vec[0]*up_vec[0]+up_vec[2]*up_vec[2]),up_vec[1]);
 	double phase = ((int) mCurrentFrame % mReferenceManager->GetPhaseLength()) / (double) mReferenceManager->GetPhaseLength();
 	Eigen::VectorXd state;
 
 	double com_diff = 0;
+	
+
+
+	// #ifdef OBJECT_TYPE
+	// 	state.resize(p.rows()+v.rows()+1+1+p_next.rows()+ee.rows()+2 + path_knot);
+	// 	state<< p, v, up_vec_angle, root_height, p_next, ee, mCurrentFrameOnPhase, heightMap;
+	// #endif
+	// #ifndef OBJECT_TYPE
 	state.resize(p.rows()+v.rows()+1+1+p_next.rows()+ee.rows()+2);
 	state<< p, v, up_vec_angle, root_height, p_next, mAdaptiveStep, ee, mCurrentFrameOnPhase;
+	// #endif
 
 	return state;
+
 }
 
 bool
@@ -727,6 +672,9 @@ Reset(bool RSI)
 	//RSI
 	if(RSI) {
 		this->mCurrentFrame = (int) dart::math::Random::uniform(0.0, mReferenceManager->GetPhaseLength()-5.0);
+		// if(this->mCurrentFrame <70 && this->mCurrentFrame >50){
+		// 	this->mCurrentFrame += 25;
+		// }
 	}
 	// else {
 	// 	this->mCurrentFrame = 0; // 0;

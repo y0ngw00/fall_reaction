@@ -2,6 +2,7 @@
 #include "GLUTWindow.h"
 #include <iostream>
 #include <GL/glut.h>
+#include <GL/glew.h>
 
 std::vector<GLUTWindow*> GLUTWindow::mWindows;
 std::vector<int> GLUTWindow::mWinIDs;
@@ -23,9 +24,11 @@ GLUTWindow::
 GLInitWindow(const char* _name)
 {
 	mWindows.push_back(this);
+
 	glutInitDisplayMode(GLUT_DEPTH |GLUT_DOUBLE | GLUT_RGBA | GLUT_STENCIL);
 	//glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_MULTISAMPLE | GLUT_ACCUM);
-	glutInitWindowSize(640, 640);
+
+	glutInitWindowSize(1920, 1080);
 	glutInitWindowPosition(0, 0);
 	mWinIDs.push_back(glutCreateWindow(_name));
 	glutDisplayFunc(DisplayEvent);
@@ -37,14 +40,20 @@ GLInitWindow(const char* _name)
 	
 	glutTimerFunc(mDisplayTimeout, TimerEvent, 0);
 
-	GLinitEnvironment();
+	if (glewInit() != GLEW_OK) {
+    	fprintf(stderr, "Failed to initialize GLEW\n");
+    	exit(-1);
+	}
+
+	glRecordInitialize();
+	glinitEnvironment();
 }
 
 
 
 void 
 GLUTWindow::
-GLinitEnvironment()
+glinitEnvironment()
 {
 	float  light0_position[] = { 10.0, 10.0, 10.0, 1.0 };
 	float  light0_diffuse[] = { 0.8, 0.8, 0.8, 1.0 };
@@ -82,6 +91,30 @@ GLinitEnvironment()
 	glFogf(GL_FOG_DENSITY,0.05);
 	glFogf(GL_FOG_START,20.0);
 	glFogf(GL_FOG_END,60.0);
+
+}
+
+
+void 
+GLUTWindow::
+glRecordInitialize()
+{
+	RecorderConfig cfg;
+    cfg.m_triple_buffering = 1;
+    cfg.m_record_audio = 1;
+    cfg.m_width = 1920;
+    cfg.m_height = 1080;
+    cfg.m_video_format = OGR_VF_VP8;
+    cfg.m_audio_format = OGR_AF_VORBIS;
+    cfg.m_audio_bitrate = 112000;
+    cfg.m_video_bitrate = 200000;
+    cfg.m_record_fps = 30;
+    cfg.m_record_jpg_quality = 90;
+    ogrInitConfig(&cfg);
+    ogrRegReadPixelsFunction(glReadPixels);
+    ogrRegPBOFunctions(glGenBuffers, glBindBuffer, glBufferData,glDeleteBuffers, glMapBuffer, glUnmapBuffer);
+
+    ogrSetSavedName("Render");
 }
 
 

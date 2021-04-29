@@ -36,9 +36,11 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 
     for(int i = 0; i < 1000; i++) {
         Eigen::VectorXd p = mReferenceManager->GetPosition(phase);
+
         pos.push_back(p);
         phase += mReferenceManager->GetTimeStep(phase);
     }
+
 
 	UpdateMotion(pos, "bvh");
 
@@ -61,44 +63,41 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 	}
 
 
-	// #ifdef OBJECT_TYPE 
-	// 	this-> mObj_1 = dart::dynamics::Skeleton::create("Jump_Box");
-	// 	auto bn_1 = mObj_1->getBodyNode("Jump_Box");
+	#ifdef OBJECT_TYPE 
+		this-> mObj_1 = dart::dynamics::Skeleton::create("Jump_Box");
+		auto bn_1 = mObj_1->getBodyNode("Jump_Box");
 
-	// 	Eigen::Isometry3d jointPosition_1;
-	// 	jointPosition_1.setIdentity();
-	// 	jointPosition_1.translation()<<0, 0, 0;
+		Eigen::Isometry3d jointPosition_1;
+		jointPosition_1.setIdentity();
+		jointPosition_1.translation()<<0, 0, 0;
 
-	// 	Eigen::Isometry3d bodyPosition_1;
-	// 	bodyPosition_1.setIdentity();
-	// 	bodyPosition_1.translation()<<0, 0.45, 0;
+		Eigen::Isometry3d bodyPosition_1;
+		bodyPosition_1.setIdentity();
+		bodyPosition_1.translation()<<0, 0.582, -0.2;
 
-	// 	DPhy::SkeletonBuilder::MakeWeldJointBody("Jump_Box",mObj_1,bn_1,Eigen::Vector3d(0.8, 0.90, 0.8),jointPosition_1
-	// 											,bodyPosition_1,500.0,true);
+		DPhy::SkeletonBuilder::MakeWeldJointBody("Jump_Box",mObj_1,bn_1,Eigen::Vector3d(0.8, 1.164, 0.8),jointPosition_1
+												,bodyPosition_1,500.0,true);
 
 
-	// #endif
+	#endif
 
-	// #ifdef OBJECT_TYPE2
+	#ifdef OBJECT_TYPE2
 		
-	// 	this-> mObj_2 = dart::dynamics::Skeleton::create("Jump_Box");
-	// 	auto bn = mObj_2->getBodyNode("Jump_Box");
+		this-> mObj_2 = dart::dynamics::Skeleton::create("Jump_Box");
+		auto bn = mObj_2->getBodyNode("Jump_Box");
 
-	// 	Eigen::Isometry3d jointPosition;
-	// 	jointPosition.setIdentity();
-	// 	jointPosition.translation()<<0, 0, 0;
+		Eigen::Isometry3d jointPosition;
+		jointPosition.setIdentity();
+		jointPosition.translation()<<0, 0, 0;
 
-	// 	Eigen::Isometry3d bodyPosition;
-	// 	bodyPosition.setIdentity();
-	// 	bodyPosition.translation()<<0, 0.225, 8;
+		Eigen::Isometry3d bodyPosition;
+		bodyPosition.setIdentity();
+		bodyPosition.translation()<<0, 0.25, 3.8;
 
-	// 	DPhy::SkeletonBuilder::MakeWeldJointBody("Jump_Box",mObj_2,bn,Eigen::Vector3d(0.8, 0.45, 0.8),jointPosition
-	// 											,bodyPosition,500.0,true);	
+		DPhy::SkeletonBuilder::MakeWeldJointBody("Jump_Box",mObj_2,bn,Eigen::Vector3d(0.8, 0.50, 0.8),jointPosition
+												,bodyPosition,500.0,true);	
 
-	// #endif
-
-
-
+	#endif
 
 }
 
@@ -116,9 +115,11 @@ display()
 	DrawGround();
 	DrawSkeletons();
 
-	glutSwapBuffers();
-
 	GUI::DrawStringOnScreen(0.8, 0.9, std::to_string(mCurFrame), true, Eigen::Vector3d::Zero());
+
+	glutSwapBuffers();
+	if(this->isRecord)
+		ogrCapture();
 }
 void
 MainInterface::
@@ -203,7 +204,6 @@ initNetworkSetting(std::string ppo) {
     		//if (reg!="") this->mController = new DPhy::Controller(mReferenceManager, true, true, true);
     		this->mController = new DPhy::Controller(mReferenceManager, this->character_path,true); //adaptive=true, bool parametric=true, bool record=true
 			//mController->SetGoalParameters(mReferenceManager->GetParamCur());
-			std::cout<<0<<std::endl;
 
 			py::object sys_module = py::module::import("sys");
 			py::str module_dir = (std::string(PROJECT_DIR)+"/network").c_str();
@@ -212,12 +212,10 @@ initNetworkSetting(std::string ppo) {
     		py::object ppo_main = py::module::import("ppo");
 			this->mPPO = ppo_main.attr("PPO")();
 			std::string path = std::string(PROJECT_DIR)+ std::string("/network/output/") + ppo;
-			std::cout<<1<<std::endl;
 
 			this->mPPO.attr("initRun")(path,
 									   this->mController->GetNumState(), 
 									   this->mController->GetNumAction());
-			std::cout<<2<<std::endl;
 			RunPPO();
     	}
     
@@ -250,7 +248,6 @@ RunPPO() {
 		
 		count += 1;
 	}
-	std::cout<<3<<std::endl;
 	for(int i = 0; i <= count; i++) {
 
 		Eigen::VectorXd position = this->mController->GetPositions(i);
@@ -265,7 +262,6 @@ RunPPO() {
 		pos_bvh.push_back(position_bvh);
 		
 	}
-	std::cout<<4<<std::endl;
 	// Eigen::VectorXd root_bvh = mReferenceManager->GetPosition(0, false);
 	// pos_sim =  DPhy::Align(pos_sim, root_bvh);
 	// pos_reg =  DPhy::Align(pos_reg, root_bvh);
@@ -381,6 +377,7 @@ keyboard(unsigned char key, int mx, int my)
         	on_animation = true;
         else if(on_animation)
         	on_animation = false;
+        	std::cout<<this->mSkel->getBodyNode("RightToe")->getWorldTransform().translation()<<std::endl;
     }
     if (key == '1') 
 		this->render_bvh = (this->render_bvh == false);
@@ -389,12 +386,21 @@ keyboard(unsigned char key, int mx, int my)
 	if (key == 'r')
 		Reset();
 	// // change animation mode
-	// if (key == 'a') {
-	// 	animation_flag = (animation_flag + 1) % 5;
-	// }
-	// if (key == 'A') {
-	// 	animation_flag = (animation_flag + 4) % 5;
-	// }
+	if (key == 'v') {
+		if(!this->isRecord){
+			std::cout<<"Recording Starts"<<std::endl;
+        	this->isRecord = true;
+        	ogrPrepareCapture();
+        }
+        else if(this->isRecord){
+        	std::cout<<"Recording Ends"<<std::endl;
+        	this->isRecord = false;
+        	ogrStopCapture();
+        }
+    }
+	if (key == 's') 
+		glRecordInitialize();
+
 
 	// // change animation scale
 	// if (key == '_' || key == '-') {
@@ -414,31 +420,13 @@ MainInterface::
 skeyboard(int key, int x, int y)
 {
 
-	// if(on_animation) {
- //        if (key == GLUT_KEY_LEFT) {
- //        	std::cout<<"LEFT"<<std::endl;
- //            if(speed_type ==0)return;
- //            BVH *temp_bvh = current_bvh;
- //            if (motion_type == 0)
- //                motion_type = mCharacter->getMotionrange() - 1;
- //            else
- //                motion_type--;
- //            current_bvh = mCharacter->getBVH(speed_type, motion_type);
- //            current_bvh = mCharacter->MotionBlend(frame_no, temp_bvh, current_bvh);
- //            begin = std::chrono::steady_clock::now();
- //        }
- //        if (key == GLUT_KEY_RIGHT) {
- //        	std::cout<<"RIGHT"<<std::endl;
- //            if(speed_type ==0)return;
- //            BVH *temp_bvh = current_bvh;
- //            if (motion_type == mCharacter->getMotionrange() - 1)
- //                motion_type = 0;
- //            else
- //                motion_type++;
- //            current_bvh = mCharacter->getBVH(speed_type, motion_type);
- //            current_bvh = mCharacter->MotionBlend(frame_no,temp_bvh, current_bvh);
- //            begin = std::chrono::steady_clock::now();
- //        }
+	if(!on_animation) {
+        if (key == GLUT_KEY_LEFT) {
+        	this->mCurFrame--;
+        }
+        if (key == GLUT_KEY_RIGHT) {
+        	this->mCurFrame++;
+        }
  //        if (key == GLUT_KEY_UP) {
  //        	std::cout<<"UP"<<std::endl;
  //            BVH *temp_bvh = current_bvh;
@@ -461,7 +449,7 @@ skeyboard(int key, int x, int y)
  //            current_bvh = mCharacter->MotionBlend(frame_no,temp_bvh, current_bvh);
  //            begin = std::chrono::steady_clock::now();
  //        }
- //    }
+     }
 
 }
 

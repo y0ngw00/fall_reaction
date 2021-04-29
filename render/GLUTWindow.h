@@ -6,6 +6,7 @@
 #include <Eigen/Geometry>
 #include <memory>
 #include <iostream>
+#include "openglrecorder.h"
 
 #include "Camera.h"
 
@@ -27,11 +28,14 @@ public:
 	static void IdleEvent();
 	static void TimerEvent(int value);
 
+	static void glRecordInitialize();
+
+
 	static std::vector<GLUTWindow*> mWindows;
 	static std::vector<int> mWinIDs;
 	
 protected:
-	virtual void GLinitEnvironment();
+	virtual void glinitEnvironment();
 	virtual void DrawGround()=0;
 	virtual void display()=0;
 	virtual void motion(int mx, int my)=0; 
@@ -56,6 +60,7 @@ protected:
 	int mx;
 	int my;
 	int frame_no;
+
 };
 
 

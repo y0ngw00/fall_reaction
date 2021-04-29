@@ -20,7 +20,6 @@
 #include "ReferenceManager.h"
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
-
 namespace py = pybind11;
 
 class MainInterface : public GLUTWindow
@@ -45,6 +44,7 @@ public:
  	void initNetworkSetting(std::string ppo);
  	void UpdateMotion(std::vector<Eigen::VectorXd> motion, const char* type);
  	void RunPPO();
+
 
 	
 protected:
@@ -93,7 +93,9 @@ protected:
 
 	bool render_bvh=false;
 	bool render_sim=false;
+	bool mRecord=true;
 
+	bool isRecord=false;
 	
 };
 
