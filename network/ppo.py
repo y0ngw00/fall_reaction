@@ -336,15 +336,14 @@ class PPO(object):
 		epi_info_iter_hind = []
 
 		it_cur = 0
-		for it in range(num_iteration):
 
+		for it in range(num_iteration):
 			for i in range(self.num_slaves):
 				self.env.reset(i)
 			states = self.env.getStates()
-	
 			local_step = 0
 			last_print = 0
-
+			
 			epi_info = [[] for _ in range(self.num_slaves)]	
 
 			while True:

@@ -24,6 +24,7 @@ class Monitor(object):
 		self.num_slaves = self.env.num_slaves
 		self.sim_env = self.env.sim_env
 		
+		
 		self.num_state = self.env.num_state
 		self.num_action = self.env.num_action
 		self.RMS = RunningMeanStd(shape=(self.num_state))	
@@ -76,6 +77,7 @@ class Monitor(object):
 	
 	def reset(self, i, b=True):
 		self.env.reset(i, b)
+
 		state = np.array([self.sim_env.GetState(i)])
 		self.states[i] = self.RMS.apply(state)[0]
 		self.terminated[i] = False

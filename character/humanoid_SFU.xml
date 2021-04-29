@@ -1,0 +1,130 @@
+<Skeleton name="Humanoid">
+    <Joint type="FreeJoint" name="Hips" parent_name="None" size="0.5 0.5 0.5" mass="8" bvh="Hips">
+        <TorqueLimit norm="0" />
+        <BodyPosition translation="0 0 0 " />
+        <JointPosition translation="0 0 0 " />
+        <Box size="0.12 0.03 0.07 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="Hips" size="1.0 1.0 1.0" name="LeftUpLeg" bvh="LeftUpLeg" mass="7">
+        <BodyPosition translation="0.0334202 -0.0829816 0 " />
+        <JointPosition translation="0.0334202 0 0 " />
+        <Box size="0.05 0.16 0.05 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="LeftUpLeg" size="1.0 1.0 1.0" name="LeftLeg" bvh="LeftLeg" mass="3">
+        <BodyPosition translation="0.0334202 -0.246646 0 " />
+        <JointPosition translation="0.0334202 -0.165963 0 " />
+        <Box size="0.05 0.16 0.05 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="LeftLeg" size="1.0 1.0 1.0" name="LeftFoot" bvh="LeftFoot" mass="0.6">
+        <BodyPosition translation="0.0334202 -0.335832 0.031731 " />
+        <JointPosition translation="0.0334202 -0.327329 0 " />
+        <Box size="0.05 0.025 0.0653921 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="LeftFoot" size="1.0 1.0 1.0" name="LeftToe" bvh="LeftToeBase"  mass="0.1">
+        <BodyPosition translation="0.0334202 -0.335832 0.0782257 " />
+        <JointPosition translation="0.0334202 -0.344334 0.063462 " />
+        <Box size="0.05 0.025 0.0295275 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="Hips" size="1.0 1.0 1.0" name="RightUpLeg" bvh="RightUpLeg" mass="7">
+        <BodyPosition translation="-0.0334202 -0.0829816 0 " />
+        <JointPosition translation="-0.0334202 0 0 " />
+        <Box size="0.05 0.16 0.05 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="RightUpLeg" size="1.0 1.0 1.0" name="RightLeg" bvh="RightLeg" mass="3">
+        <BodyPosition translation="-0.0334202 -0.246646 0 " />
+        <JointPosition translation="-0.0334202 -0.165963 0 " />
+        <Box size="0.05 0.16 0.05 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="RightLeg" size="1.0 1.0 1.0" name="RightFoot" bvh="RightFoot" mass="0.6">
+        <BodyPosition translation="-0.0334202 -0.335832 0.031731 " />
+        <JointPosition translation="-0.0334202 -0.327329 0 " />
+        <Box size="0.05 0.025 0.0653921 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="RightFoot" size="1.0 1.0 1.0" name="RightToe" bvh="RightToeBase"  mass="0.1">
+        <BodyPosition translation="-0.0334202 -0.335832 0.0782257 " />
+        <JointPosition translation="-0.0334202 -0.344334 0.063462 " />
+        <Box size="0.05 0.025 0.0295275 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="Hips" size="1.0 1.0 1.0" name="Spine" bvh="Spine" mass="8">
+        <BodyPosition translation="0 0.0466833 0 " />
+        <JointPosition translation="0 0.0003937 0 " />
+        <Box size="0.10 0.08 0.05 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="Spine" size="1.0 1.0 1.0" name="Spine1" bvh="Spine1" mass="5">
+        <BodyPosition translation="0 0.137047 0 " />
+        <JointPosition translation="0 0.092973 0 " />
+        <Box size="0.12 0.08 0.07 " />
+        <Box size="0.12 0.08 0.07 " />
+        <Box size="0.12 0.08 0.07 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="Spine1" size="1.0 1.0 1.0" name="Neck" bvh="Neck" mass="1.5">
+        <BodyPosition translation="0 0.215595 0 " />
+        <JointPosition translation="0 0.18112 0 " />
+        <Box size="0.05 0.06 0.05 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="Neck" size="1.0 1.0 1.0" name="Head" bvh="Head" mass="3">
+        <BodyPosition translation="0 0.272707 0 " />
+        <JointPosition translation="0 0.25007 0 " />
+        <Box size="0.08 0.05 0.08 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="Spine1" size="1.0 1.0 1.0" name="LeftShoulder" bvh="LeftShoulder" mass="1">
+        <BodyPosition translation="0.0365582 0.18112 0 " />
+        <JointPosition translation="0 0.18112 0 " />
+        <Box size="0.05 0.025 0.05 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="LeftShoulder" size="1.0 1.0 1.0" name="LeftArm" bvh="LeftArm" mass="2.1">
+        <BodyPosition translation="0.127209 0.18112 0 " />
+        <JointPosition translation="0.0731164 0.18112 0 " />
+        <Box size="0.108184 0.04 0.04 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="LeftArm" size="1.0 1.0 1.0" name="LeftForeArm" bvh="LeftForeArm" mass="1.2">
+        <BodyPosition translation="0.232275 0.181119 0 " />
+        <JointPosition translation="0.181301 0.181119 0 " />
+        <Box size="0.101948 0.04 0.04 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="LeftForeArm" size="1.0 1.0 1.0" name="LeftHand" bvh="LeftHand" mass="0.4">
+        <BodyPosition translation="0.302934 0.181119 0 " />
+        <JointPosition translation="0.283249 0.181119 0 " />
+        <Box size="0.03937 0.04 0.03 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="LeftHand" size="1.0 1.0 1.0" name="LeftHandThumb" bvh="LeftHandThumb" mass="0.05">
+        <BodyPosition translation="0.283249 0.181119 0.019685 " />
+        <JointPosition translation="0.283249 0.181119 0 " />
+        <Box size="0.03 0.03 0.03 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="LeftHand" size="1.0 1.0 1.0" name="L_Wrist_End" bvh="L_Wrist_End" mass="0.05">
+        <BodyPosition translation="0.322619 0.181119 0 " />
+        <JointPosition translation="0.322619 0.181119 0 " />
+        <Box size="0.03937 0.04 0.03 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="Spine1" size="1.0 1.0 1.0" name="RightShoulder" bvh="RightShoulder" mass="1">
+        <BodyPosition translation="-0.0365582 0.18112 0 " />
+        <JointPosition translation="0 0.18112 0 " />
+        <Box size="0.05 0.025 0.05 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="RightShoulder" size="1.0 1.0 1.0" name="RightArm" bvh="RightArm" mass="2.1">
+        <BodyPosition translation="-0.127209 0.18112 0 " />
+        <JointPosition translation="-0.0731164 0.18112 0 " />
+        <Box size="0.108184 0.04 0.04 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="RightArm" size="1.0 1.0 1.0" name="RightForeArm" bvh="RightForeArm" mass="1.2">
+        <BodyPosition translation="-0.232275 0.181119 0 " />
+        <JointPosition translation="-0.181301 0.181119 0 " />
+        <Box size="0.101948 0.04 0.04 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="RightForeArm" size="1.0 1.0 1.0" name="RightHand" bvh="RightHand" mass="0.4">
+        <BodyPosition translation="-0.310217 0.181119 0 " />
+        <JointPosition translation="-0.283249 0.181119 0 " />
+        <Box size="0.0539369 0.04 0.03 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="RightHand" size="1.0 1.0 1.0" name="RightHandThumb" bvh="RightHandThumb" mass="0.01">
+        <BodyPosition translation="-0.283249 0.181119 0.019685 " />
+        <JointPosition translation="-0.283249 0.181119 0 " />
+        <Box size="0.03 0.03 0.03 " />
+    </Joint>
+    <Joint type="BallJoint" parent_name="RightHand" size="1.0 1.0 1.0" name="R_Wrist_End" bvh="R_Wrist_End"  mass="0.01">
+        <BodyPosition translation="-0.337186 0.181119 0 " />
+        <JointPosition translation="-0.337186 0.181119 0 " />
+        <Box size="0.03937 0.04 0.03 " />
+    </Joint>
+</Skeleton>

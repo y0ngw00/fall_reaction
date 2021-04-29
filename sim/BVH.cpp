@@ -13,12 +13,6 @@
 using namespace std;
 
 
-// JOINT *Head, *Neck, *Spine, *Spine1, *Spine2, *Hips;
-// JOINT *LeftShoulder, *LeftArm, *LeftForeArm, *LeftHand;
-// JOINT *RightShoulder, *RightArm, *RightForeArm, *RightHand;
-// JOINT *LeftUpLeg, *LeftLeg, *LeftFoot, *LeftToe;
-// JOINT *RightUpLeg, *RightLeg, *RightFoot, *RightToe;
-
 static inline std::string &rtrim(std::string &s)
 {
     s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());

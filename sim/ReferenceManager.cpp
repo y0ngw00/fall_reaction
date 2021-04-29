@@ -35,7 +35,6 @@ LoadMotionFromBVH(std::string filename)
 	mMotions_raw.clear();
 	mMotions_phase.clear();
 	mMotions_gen.clear();
-
 	std::string path = std::string(PROJECT_DIR) + filename;
 	BVH* bvh = new DPhy::BVH(path);
 	if(!bvh->IsLoadSuccess()){
@@ -100,6 +99,7 @@ LoadMotionFromBVH(std::string filename)
 
 		}
 
+
 		pos.block<3,1>(3,0) = bvh->GetRootCOM();  		// Insert COM position 
 		Eigen::VectorXd v;
 
@@ -128,12 +128,16 @@ LoadMotionFromBVH(std::string filename)
 
 		std::vector<bool> c;
 		for(int j = 0; j < contact.size(); j++) {
+
 			Eigen::Vector3d p = skel->getBodyNode(contact[j])->getWorldTransform().translation();
+
 			c.push_back(p[1] < 0.04);
 		}
+
 		mContacts.push_back(c);
 
 		t += bvh->GetTimestep();
+
 	}
 
 	mMotions_raw.back()->SetVelocity(mMotions_raw.front()->GetVelocity());
@@ -149,7 +153,7 @@ LoadMotionFromBVH(std::string filename)
 						mContacts[i][j] = true;
 		}
 	 }
-
+	 
 	delete bvh;
 	this->GenerateMotionsFromSinglePhase(1000, true, mMotions_phase, mMotions_gen);
 
@@ -260,6 +264,8 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_p
 		}
 	}
 	mLock.unlock();
+
+
 
 }
 

@@ -14,7 +14,9 @@ namespace DPhy
 */ 
 Character::Character(const std::string& path)
 {
+	//std::pair<SkeletonPtr, std::map<std::string, double>*> p = SkeletonBuilder::BuildFromFile(path);
 	std::pair<SkeletonPtr, std::map<std::string, double>*> p = SkeletonBuilder::BuildFromFile(path);
+
 	this->mSkeleton = p.first;
 	this->mTorqueMap = p.second;
 

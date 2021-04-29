@@ -523,7 +523,9 @@ GetState()
 	
 	state.resize(p.rows()+v.rows()+1+1+p_next.rows()+ee.rows()+2);
 	state<< p, v, up_vec_angle, root_height, p_next, mAdaptiveStep, ee, mCurrentFrameOnPhase;
-
+	// std::cout<<state<<std::endl;
+	std::cout<<"Controller check"<<std::endl;
+	
 	return state;
 }
 

@@ -119,7 +119,7 @@ BuildFromFile(const std::string& filename){
 	
 	std::string skelname = skeldoc->Attribute("name");
 	dart::dynamics::SkeletonPtr skel = dart::dynamics::Skeleton::create(skelname);
-	std::cout << skelname << std::endl;
+	// std::cout << skelname << std::endl;
 	std::map<std::string, double>* torqueMap = new std::map<std::string, double>();
 	std::map<std::string, Eigen::VectorXd>* positionMap = new std::map<std::string, Eigen::VectorXd>();
 

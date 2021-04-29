@@ -1,12 +1,12 @@
 from utils import RunningMeanStd
 import numpy as np
-import simEnv
+import SimEnv
 import time
 from IPython import embed
 class Env(object):
 	def __init__(self, ref, directory, num_slaves):
 		self.num_slaves = num_slaves
-		self.sim_env = simEnv.Env(num_slaves, "/motion/"+ref, directory)
+		self.sim_env = SimEnv.Env(num_slaves, "/motion/"+ref, directory)
 
 		self.num_state = self.sim_env.GetNumState()
 		self.num_action = self.sim_env.GetNumAction()
