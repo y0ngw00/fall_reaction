@@ -85,6 +85,30 @@ GLinitEnvironment()
 }
 
 
+void 
+GLUTWindow::
+glRecordInitialize()
+{
+	RecorderConfig cfg;
+    cfg.m_triple_buffering = 1;
+    cfg.m_record_audio = 1;
+    cfg.m_width = 1920;
+    cfg.m_height = 1080;
+    cfg.m_video_format = OGR_VF_VP8;
+    cfg.m_audio_format = OGR_AF_VORBIS;
+    cfg.m_audio_bitrate = 112000;
+    cfg.m_video_bitrate = 200000;
+    cfg.m_record_fps = 30;
+    cfg.m_record_jpg_quality = 90;
+    ogrInitConfig(&cfg);
+    ogrRegReadPixelsFunction(glReadPixels);
+    ogrRegPBOFunctions(glGenBuffers, glBindBuffer, glBufferData,glDeleteBuffers, glMapBuffer, glUnmapBuffer);
+
+    ogrSetSavedName("Render");
+}
+
+
+
 inline GLUTWindow*
 GLUTWindow::
 current()

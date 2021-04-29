@@ -7,6 +7,8 @@
 #include <memory>
 #include <iostream>
 
+#include "openglrecorder.h"
+
 #include "Camera.h"
 
 class GLUTWindow
@@ -26,6 +28,9 @@ public:
 	static void ReshapeEvent(int w, int h);
 	static void IdleEvent();
 	static void TimerEvent(int value);
+
+	static void glRecordInitialize();
+
 
 	static std::vector<GLUTWindow*> mWindows;
 	static std::vector<int> mWinIDs;

@@ -93,6 +93,9 @@ protected:
 	bool render_sim=false;
 
 	
+	bool isRecord=false;
+
+	
 };
 
 

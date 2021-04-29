@@ -64,7 +64,8 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 		this->render_sim=true;
 		
 	}
-	
+
+
 	
 
 
@@ -85,6 +86,10 @@ display()
 
 	DrawSkeletons();
 	glutSwapBuffers();
+
+	
+	if(this->isRecord)
+		ogrCapture();
 
 	//GUI::DrawStringOnScreen(0.8, 0.9, std::to_string(mCurFrame), true, Eigen::Vector3d::Zero());
 }
@@ -342,6 +347,21 @@ keyboard(unsigned char key, int mx, int my)
 		this->render_sim = (this->render_sim == false);
 	if (key == 'r')
 		Reset();
+	// // change animation mode
+	if (key == 'v') {
+		if(!this->isRecord){
+			std::cout<<"Recording Starts"<<std::endl;
+        	this->isRecord = true;
+        	ogrPrepareCapture();
+        }
+        else if(this->isRecord){
+        	std::cout<<"Recording Ends"<<std::endl;
+        	this->isRecord = false;
+        	ogrStopCapture();
+        }
+    }
+	if (key == 's') 
+		glRecordInitialize();	
 	// // change animation mode
 	// if (key == 'a') {
 	// 	animation_flag = (animation_flag + 1) % 5;

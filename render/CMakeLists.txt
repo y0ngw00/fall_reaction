@@ -24,6 +24,7 @@ find_package(OpenGL REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(Qt5Widgets CONFIG REQUIRED)
 find_package(Qt5OpenGL CONFIG REQUIRED)
+find_package(OpenGLRecorder REQUIRED)
 link_libraries(stdc++fs)
 
 add_compile_options(-DHAVE_CSTDDEF)
@@ -34,6 +35,7 @@ include_directories(${TinyXML_INCLUDE_DIRS})
 include_directories(${PYTHON_INCLUDE_DIR})
 include_directories(${OPENGL_INCLUDE_DIR})
 include_directories(${GLEW_INCLUDE_DIR})
+include_directories(${OpenGLRecorder_INCLUDE_DIR})
 
 
 include(FindOpenMP)
@@ -46,6 +48,6 @@ endif()
 file(GLOB SOURCES *.cpp *.h)
 add_executable(motion_ctr ${SOURCES})
 target_link_libraries(motion_ctr Qt5::Widgets Qt5::OpenGL 
-	${DART_LIBRARIES} ${Pybind11_LIBRARIES} ${PYTHON_LIBRARIES} GL GLU glut GLEW sim ${TinyXML_LIBRARIES} 
+	${DART_LIBRARIES} ${Pybind11_LIBRARIES} ${PYTHON_LIBRARIES} GL GLU glut GLEW sim ${TinyXML_LIBRARIES} ${OpenGLRecorder_LIBRARY}
 	
 )
