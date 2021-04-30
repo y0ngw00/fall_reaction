@@ -60,8 +60,6 @@ py::array_t<double>
 SimEnv::
 GetState(int id)
 {
-	py::array_t<double> test = DPhy::toNumPyArray(mSlaves[id]->GetState());
-
 	return DPhy::toNumPyArray(mSlaves[id]->GetState());
 }
 void 

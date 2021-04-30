@@ -26,7 +26,3 @@ file(GLOB SOURCES "*.h" "*.cpp")
 
 add_library(sim ${SOURCES} )
 target_link_libraries(sim ${DART_LIBRARIES} ${Pybind11_LIBRARIES} ${TinyXML_LIBRARIES} ${PYTHON_LIBRARIES})
-
-
-# add_executable(xmlGen BVHToXML.cpp)
-# target_link_libraries(xmlGen ${TinyXML_LIBRARIES})
