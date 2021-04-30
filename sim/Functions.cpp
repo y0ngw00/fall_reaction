@@ -9,6 +9,7 @@
 #include <locale>
 #include <Eigen/Eigenvalues>
 
+namespace py = pybind11;
 namespace DPhy
 {
 py::array_t<float> toNumPyArray(const std::vector<float>& val)
@@ -34,8 +35,8 @@ py::array_t<double> toNumPyArray(const std::vector<double>& val)
 }
 py::array_t<double> toNumPyArray(const std::vector<Eigen::VectorXd>& val)
 {
-	int n = val.size();
-	int m = val[0].rows();
+	uint n = val.size();
+	uint m = val[0].rows();
 	py::array_t<double> array({n, m});
     py::buffer_info buf = array.request(true);
     double* ptr = reinterpret_cast<double*>(buf.ptr);
@@ -51,9 +52,9 @@ py::array_t<double> toNumPyArray(const std::vector<Eigen::VectorXd>& val)
 }
 py::array_t<double> toNumPyArray(const std::vector<Eigen::MatrixXd>& val)
 {
-	int n = val.size();
-	int m = val[0].rows();
-	int l = val[0].cols();
+	uint n = val.size();
+	uint m = val[0].rows();
+	uint l = val[0].cols();
 
     py::array_t<double> array({n, m, l});
     py::buffer_info buf = array.request(true);
@@ -70,8 +71,8 @@ py::array_t<double> toNumPyArray(const std::vector<Eigen::MatrixXd>& val)
 }
 py::array_t<double> toNumPyArray(const std::vector<std::vector<float>>& val)
 {
-	int n = val.size();
-	int m = val[0].size();
+	uint n = val.size();
+	uint m = val[0].size();
 
     py::array_t<double> array({n, m});
     py::buffer_info buf = array.request(true);
@@ -87,8 +88,8 @@ py::array_t<double> toNumPyArray(const std::vector<std::vector<float>>& val)
 }
 py::array_t<double> toNumPyArray(const std::vector<std::vector<double>>& val)
 {
-	int n = val.size();
-	int m = val[0].size();
+	uint n = val.size();
+	uint m = val[0].size();
 
     py::array_t<double> array({n, m});
     py::buffer_info buf = array.request(true);
@@ -107,7 +108,7 @@ py::array_t<double> toNumPyArray(const std::vector<std::vector<double>>& val)
 //always return 1-dim array
 py::array_t<double> toNumPyArray(const std::vector<bool>& val)
 {
-	int n = val.size();
+	uint n = val.size();
 
     py::array_t<double> array(n);
     py::buffer_info buf = array.request(true);
@@ -124,24 +125,22 @@ py::array_t<double> toNumPyArray(const std::vector<bool>& val)
 //always return 1-dim array
 py::array_t<double> toNumPyArray(const Eigen::VectorXd& vec)
 {
-	int n = vec.rows();
+	uint n = vec.rows();
 
     py::array_t<double> array(n);
     py::buffer_info buf = array.request(true);
     double* ptr = reinterpret_cast<double*>(buf.ptr);
-
 	for(int i =0;i<n;i++)
 	{
         ptr[i] = (double)vec(i);
 	}
-
 	return array;
 }
 //always return 2-dim array
 py::array_t<double> toNumPyArray(const Eigen::MatrixXd& matrix)
 {
-	int n = matrix.rows();
-	int m = matrix.cols();
+	uint n = matrix.rows();
+	uint m = matrix.cols();
 
     py::array_t<double> array({n, m});
     py::buffer_info buf = array.request(true);
@@ -161,8 +160,8 @@ py::array_t<double> toNumPyArray(const Eigen::MatrixXd& matrix)
 //always return 2-dim array
 py::array_t<double> toNumPyArray(const Eigen::Isometry3d& T)
 {
-	int n = 4;
-	int m = 4;
+	uint n = 4;
+	uint m = 4;
 
     py::array_t<float> array({n, m});
     py::buffer_info buf = array.request(true);

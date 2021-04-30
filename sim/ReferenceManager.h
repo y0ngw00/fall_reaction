@@ -47,7 +47,8 @@ public:
 	ReferenceManager(Character* character=nullptr);
 	
 	void LoadMotionFromBVH(std::string filename);
-	void GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_phase, std::vector<Motion*>& p_gen);
+	void GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_phase, std::vector<std::vector<Motion*>>& p_container);
+	void SelectMotion();
 	Motion* GetMotion(double t);
 
 	Eigen::VectorXd GetPosition(double t);
@@ -85,6 +86,7 @@ protected:
 	std::vector<Motion*> mMotions_raw;
 	std::vector<Motion*> mMotions_phase;
 	std::vector<Motion*> mMotions_gen;
+	std::vector<std::vector<Motion*>> mMotions_container;
 	std::vector<Motion*> mMotions_gen_adaptive;
 };
 

@@ -17,7 +17,9 @@ ReferenceManager(Character* character)
 	
 	mMotions_raw.clear();
 	mMotions_gen.clear();
-	mMotions_phase.clear();			
+	mMotions_phase.clear();
+	mMotions_container.clear();
+				
 
 	contact.clear();
 	mContacts.clear();
@@ -32,139 +34,157 @@ void
 ReferenceManager::
 LoadMotionFromBVH(std::string filename)
 {
-	mMotions_raw.clear();
-	mMotions_phase.clear();
+	
 	mMotions_gen.clear();
-	std::string path = std::string(PROJECT_DIR) + filename;
-	BVH* bvh = new DPhy::BVH(path);
-	if(!bvh->IsLoadSuccess()){
-		std::cout<<"Loading bvh is failed from : "<< path << std::endl;
-		return;
+	mMotions_container.clear();
+	std::string txt_path = std::string(PROJECT_DIR) + filename;
+	std::vector<std::string> motion_list;
+	char buffer[100];
+
+	std::ifstream txtread;
+	txtread.open(txt_path);
+	while(txtread>>buffer){
+		motion_list.push_back(std::string(buffer));
 	}
 
-	std::cout << "load trained data from: " << path << std::endl;
+	for(auto path :motion_list){
+		mMotions_raw.clear();
+		mMotions_phase.clear();
 
-	int dof = this->mDOF;
-	std::map<std::string,std::string> bvhMap = mCharacter->GetSkelMap(); 
-	for(auto jnt :bvhMap){
-		bvh->AddMapping(jnt.first,jnt.second);  //first = xml body node, second = bvh node
-	}
+		BVH* bvh = new DPhy::BVH(path);
+		if(!bvh->IsLoadSuccess()){
+			std::cout<<"Loading bvh is failed from : "<< path << std::endl;
+			return;
+		}
 
+		std::cout << "load trained data from: " << path << std::endl;
 
-	double t = 0;
-	for(int i = 0; i < bvh->GetNumFrames(); i++)
-	{
-		Eigen::VectorXd pos = Eigen::VectorXd::Zero(dof);
-		//Eigen::VectorXd p1 = Eigen::VectorXd::Zero(dof);
-
-		//Set p
-
-
-		bvh->SetMotion(t);
-
-
-		for(auto jnt :bvhMap)
-		{
-			//get Bodynode and Transform
-
-			dart::dynamics::BodyNode* bn = this->skel->getBodyNode(jnt.first);
-			Eigen::Matrix3d R = bvh->GetRotation(jnt.second);
-
-			//get Joint 
-			dart::dynamics::Joint* jn = bn->getParentJoint();
-			Eigen::Vector3d a = dart::dynamics::BallJoint::convertToPositions(R);
-
-			//?
-			a = QuaternionToDARTPosition(DARTPositionToQuaternion(a));
-
-			//The joint is a ball joint or free joint,
-			if(dynamic_cast<dart::dynamics::BallJoint*>(jn)!=nullptr
-				|| dynamic_cast<dart::dynamics::FreeJoint*>(jn)!=nullptr){
-				pos.block<3,1>(jn->getIndexInSkeleton(0),0) = a;  // insert euler angles of the joint
-			}
-
-
-			//The joint is a revolute joint,
-			else if(dynamic_cast<dart::dynamics::RevoluteJoint*>(jn)!=nullptr){ // 
-				if(jnt.first.find("Arm") != std::string::npos)
-					pos[jn->getIndexInSkeleton(0)] = a[1];  // In the case of Arm, insert angle at Y-axis
-				else	
-					pos[jn->getIndexInSkeleton(0)] = a[0];	// Else, insert angle at X-axis
-
-				if(pos[jn->getIndexInSkeleton(0)]>M_PI)      // Set angle between 0 and 360
-					pos[jn->getIndexInSkeleton(0)] -= 2*M_PI;
-				else if(pos[jn->getIndexInSkeleton(0)]<-M_PI)
-					pos[jn->getIndexInSkeleton(0)] += 2*M_PI;
-			}
-
+		int dof = this->mDOF;
+		std::map<std::string,std::string> bvhMap = mCharacter->GetSkelMap(); 
+		for(auto jnt :bvhMap){
+			bvh->AddMapping(jnt.first,jnt.second);  //first = xml body node, second = bvh node
 		}
 
 
-		pos.block<3,1>(3,0) = bvh->GetRootCOM();  		// Insert COM position 
-		Eigen::VectorXd v;
-
-		if(t != 0)
+		double t = 0;
+		for(int i = 0; i < bvh->GetNumFrames(); i++)
 		{
-			//
-			v = skel->getPositionDifferences(pos, mMotions_raw.back()->GetPosition()) / 0.033;
-			for(auto& jn : skel->getJoints()){
-				if(dynamic_cast<dart::dynamics::RevoluteJoint*>(jn)!=nullptr){
-					double v_ = v[jn->getIndexInSkeleton(0)];
-					if(v_ > M_PI){
-						v_ -= 2*M_PI;
-					}
-					else if(v_ < -M_PI){
-						v_ += 2*M_PI;
-					}
-					v[jn->getIndexInSkeleton(0)] = v_;
+			Eigen::VectorXd pos = Eigen::VectorXd::Zero(dof);
+			//Eigen::VectorXd p1 = Eigen::VectorXd::Zero(dof);
+
+			//Set p
+
+
+			bvh->SetMotion(t);
+
+
+			for(auto jnt :bvhMap)
+			{
+				//get Bodynode and Transform
+
+				dart::dynamics::BodyNode* bn = this->skel->getBodyNode(jnt.first);
+				Eigen::Matrix3d R = bvh->GetRotation(jnt.second);
+
+				//get Joint 
+				dart::dynamics::Joint* jn = bn->getParentJoint();
+				Eigen::Vector3d a = dart::dynamics::BallJoint::convertToPositions(R);
+
+				//?
+				a = QuaternionToDARTPosition(DARTPositionToQuaternion(a));
+
+				//The joint is a ball joint or free joint,
+				if(dynamic_cast<dart::dynamics::BallJoint*>(jn)!=nullptr
+					|| dynamic_cast<dart::dynamics::FreeJoint*>(jn)!=nullptr){
+					pos.block<3,1>(jn->getIndexInSkeleton(0),0) = a;  // insert euler angles of the joint
 				}
+
+
+				//The joint is a revolute joint,
+				else if(dynamic_cast<dart::dynamics::RevoluteJoint*>(jn)!=nullptr){ // 
+					if(jnt.first.find("Arm") != std::string::npos)
+						pos[jn->getIndexInSkeleton(0)] = a[1];  // In the case of Arm, insert angle at Y-axis
+					else	
+						pos[jn->getIndexInSkeleton(0)] = a[0];	// Else, insert angle at X-axis
+
+					if(pos[jn->getIndexInSkeleton(0)]>M_PI)      // Set angle between 0 and 360
+						pos[jn->getIndexInSkeleton(0)] -= 2*M_PI;
+					else if(pos[jn->getIndexInSkeleton(0)]<-M_PI)
+						pos[jn->getIndexInSkeleton(0)] += 2*M_PI;
+				}
+
 			}
-			mMotions_raw.back()->SetVelocity(v);
+
+
+			pos.block<3,1>(3,0) = bvh->GetRootCOM();  		// Insert COM position 
+			Eigen::VectorXd v;
+
+			if(t != 0)
+			{
+				//
+				v = skel->getPositionDifferences(pos, mMotions_raw.back()->GetPosition()) / 0.033;
+				for(auto& jn : skel->getJoints()){
+					if(dynamic_cast<dart::dynamics::RevoluteJoint*>(jn)!=nullptr){
+						double v_ = v[jn->getIndexInSkeleton(0)];
+						if(v_ > M_PI){
+							v_ -= 2*M_PI;
+						}
+						else if(v_ < -M_PI){
+							v_ += 2*M_PI;
+						}
+						v[jn->getIndexInSkeleton(0)] = v_;
+					}
+				}
+				mMotions_raw.back()->SetVelocity(v);
+			}
+			mMotions_raw.push_back(new Motion(pos, Eigen::VectorXd(pos.rows())));
+			
+			skel->setPositions(pos);
+			//skel->computeForwardKinematics(true,false,false);
+
+			std::vector<bool> c;
+			for(int j = 0; j < contact.size(); j++) {
+
+				Eigen::Vector3d p = skel->getBodyNode(contact[j])->getWorldTransform().translation();
+
+				c.push_back(p[1] < 0.04);
+			}
+
+			mContacts.push_back(c);
+
+			t += bvh->GetTimestep();
+
 		}
-		mMotions_raw.push_back(new Motion(pos, Eigen::VectorXd(pos.rows())));
+
+		mMotions_raw.back()->SetVelocity(mMotions_raw.front()->GetVelocity());
+
+		mPhaseLength = mMotions_raw.size();
+		mTimeStep = bvh->GetTimestep();
+
+		for(int i = 0; i < mPhaseLength; i++) {
+			mMotions_phase.push_back(new Motion(mMotions_raw[i]));
+			if(i != 0 && i != mPhaseLength - 1) {
+				for(int j = 0; j < contact.size(); j++)
+					if(mContacts[i-1][j] && mContacts[i+1][j] && !mContacts[i][j])
+							mContacts[i][j] = true;
+			}
+		 }
+		 
+		delete bvh;
+		this->GenerateMotionsFromSinglePhase(1000, true, mMotions_phase, mMotions_container);
+
 		
-		skel->setPositions(pos);
-		//skel->computeForwardKinematics(true,false,false);
-
-		std::vector<bool> c;
-		for(int j = 0; j < contact.size(); j++) {
-
-			Eigen::Vector3d p = skel->getBodyNode(contact[j])->getWorldTransform().translation();
-
-			c.push_back(p[1] < 0.04);
-		}
-
-		mContacts.push_back(c);
-
-		t += bvh->GetTimestep();
-
 	}
 
-	mMotions_raw.back()->SetVelocity(mMotions_raw.front()->GetVelocity());
-
-	mPhaseLength = mMotions_raw.size();
-	mTimeStep = bvh->GetTimestep();
-
-	for(int i = 0; i < mPhaseLength; i++) {
-		mMotions_phase.push_back(new Motion(mMotions_raw[i]));
-		if(i != 0 && i != mPhaseLength - 1) {
-			for(int j = 0; j < contact.size(); j++)
-				if(mContacts[i-1][j] && mContacts[i+1][j] && !mContacts[i][j])
-						mContacts[i][j] = true;
-		}
-	 }
-	 
-	delete bvh;
-	this->GenerateMotionsFromSinglePhase(1000, true, mMotions_phase, mMotions_gen);
 
 
 }
 
 void 
 ReferenceManager::
-GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_phase, std::vector<Motion*>& p_gen)
+GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_phase, std::vector<std::vector<Motion*>>& p_container)
 {
 	mLock.lock();
+	std::vector<Motion*> p_gen;
 
 	// p_gen clear?
 	while(!p_gen.empty()){
@@ -206,7 +226,8 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_p
 		
 	 	if(i < mPhaseLength) {
 	 		p_gen.push_back(new Motion(p_phase[i]));
-	 	} else {
+	 	} 
+	 	else {
 	 		Eigen::VectorXd pos;
 			if(phase == 0) { //The End of unit motion
 				std::vector<std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>> constraints;
@@ -223,7 +244,8 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_p
 				pos = p;
 				T0_gen = dart::dynamics::FreeJoint::convertToTransform(pos.head<6>());
 
-			} else { 
+			} 
+			else { 
 				pos = p_phase[phase]->GetPosition();
 				Eigen::Isometry3d T_current = dart::dynamics::FreeJoint::convertToTransform(pos.head<6>());
 				// The orientation displacement to blend
@@ -238,7 +260,8 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_p
 					Eigen::Quaterniond Q_blend = Q0_phase_gen.slerp(slerp_t, Eigen::Quaterniond::Identity());
 					T0_phase_gen.linear() = Eigen::Matrix3d(Q_blend);
 					T_current = T0_phase_gen* T_current;
-				}else{
+				}
+				else{
 					// Not blend motion. Actually this is not neccessary
 					T0_phase_gen.linear() = Eigen::Matrix3d::Identity(); 
 					T_current = T0_phase_gen* T_current;
@@ -263,10 +286,21 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_p
 			}
 		}
 	}
+	p_container.push_back(p_gen);
 	mLock.unlock();
 
 
 
+}
+
+void 
+ReferenceManager::
+SelectMotion(){
+	int Motion_num = mMotions_container.size();
+
+	int i = 0;
+
+	mMotions_gen = mMotions_container[i];
 }
 
 Motion*
@@ -364,5 +398,6 @@ GetTimeStep(double t) {
 	// } else 
 		return 1.0;
 }
+
 
 }

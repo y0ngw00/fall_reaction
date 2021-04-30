@@ -8,6 +8,7 @@ SimEnv::
 SimEnv(int num_slaves, std::string ref, std::string training_path)
 	:mNumSlaves(num_slaves)
 {
+
 	std::string character_path = std::string(PROJECT_DIR)+std::string("/character/") + std::string(REF_CHARACTER_TYPE) + std::string(".xml");
 	mPath = training_path;
 
@@ -17,6 +18,7 @@ SimEnv(int num_slaves, std::string ref, std::string training_path)
 	DPhy::Character* character = new DPhy::Character(character_path);
 	mReferenceManager = new DPhy::ReferenceManager(character);
 	mReferenceManager->LoadMotionFromBVH(ref);
+	mReferenceManager->SelectMotion();
 
 	// Set Rewards 
 	for(int i =0;i<num_slaves;i++)

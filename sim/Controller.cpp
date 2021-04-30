@@ -275,7 +275,7 @@ UpdateTerminalInfo()
 		mIsTerminal = true;
 		terminationReason = 5;
 	}
-	else if(mCurrentFrame > mReferenceManager->GetPhaseLength() * 10) { // this->mBVH->GetMaxFrame() - 1.0){
+	else if(mCurrentFrame > std::min(800,mReferenceManager->GetPhaseLength()*10)) { // this->mBVH->GetMaxFrame() - 1.0){
 		mIsTerminal = true;
 		terminationReason =  8;
 	}
@@ -513,6 +513,8 @@ GetState()
 	Eigen::VectorXd p_now = p_v_target->GetPosition();
 	// The rotation and translation of end effector in the future(future 1 frame)
 	Eigen::VectorXd p_next = GetEndEffectorStatePosAndVel(p_now, p_v_target->GetVelocity()*t);
+
+	Eigen::VectorXd p_next2 = GetEndEffectorStatePosAndVel(p_now, p_v_target->GetVelocity()*2*t);
 	
 	delete p_v_target;
 
@@ -521,10 +523,9 @@ GetState()
 
 	double com_diff = 0;
 	
-	state.resize(p.rows()+v.rows()+1+1+p_next.rows()+ee.rows()+2);
-	state<< p, v, up_vec_angle, root_height, p_next, mAdaptiveStep, ee, mCurrentFrameOnPhase;
-	// std::cout<<state<<std::endl;
-	std::cout<<"Controller check"<<std::endl;
+	state.resize(p.rows()+v.rows()+1+1+p_next.rows()*2 +ee.rows());
+	state<< p, v, up_vec_angle, root_height, p_next,p_next2, ee;
+
 	
 	return state;
 }
@@ -576,6 +577,8 @@ Controller::
 Reset(bool RSI)
 {
 	this->mWorld->reset();
+
+	mReferenceManager->SelectMotion();
 	dart::dynamics::SkeletonPtr skel = mCharacter->GetSkeleton();
 	skel->clearConstraintImpulses();
 	skel->clearInternalForces();
