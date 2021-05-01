@@ -28,6 +28,7 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 	DPhy::Character* ref = new DPhy::Character(character_path);
     mReferenceManager = new DPhy::ReferenceManager(ref);
     mReferenceManager->LoadMotionFromBVH(std::string("/motion/") + bvh);
+
     std::vector<Eigen::VectorXd> pos;
 	
 	phase = 0;

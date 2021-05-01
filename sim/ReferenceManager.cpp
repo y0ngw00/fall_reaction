@@ -47,9 +47,11 @@ LoadMotionFromBVH(std::string filename)
 		motion_list.push_back(std::string(buffer));
 	}
 
-	for(auto path :motion_list){
+	for(auto p :motion_list){
 		mMotions_raw.clear();
 		mMotions_phase.clear();
+
+		std::string path = std::string(PROJECT_DIR) + "/motion/"+p;
 
 		BVH* bvh = new DPhy::BVH(path);
 		if(!bvh->IsLoadSuccess()){
@@ -174,7 +176,7 @@ LoadMotionFromBVH(std::string filename)
 
 		
 	}
-
+	SelectMotion();
 
 
 }
