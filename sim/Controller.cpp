@@ -275,7 +275,7 @@ UpdateTerminalInfo()
 		mIsTerminal = true;
 		terminationReason = 5;
 	}
-	else if(mCurrentFrame > std::min(800,mReferenceManager->GetPhaseLength()*10)) { // this->mBVH->GetMaxFrame() - 1.0){
+	else if(mCurrentFrame > mReferenceManager->GetPhaseLength()*10) { // this->mBVH->GetMaxFrame() - 1.0){
 		mIsTerminal = true;
 		terminationReason =  8;
 	}
@@ -473,61 +473,50 @@ GetState()
 	
 	double root_height = skel->getRootBodyNode()->getCOM()[1];
 
-	Eigen::VectorXd p_save = skel->getPositions();
-	Eigen::VectorXd v_save = skel->getVelocities();
+
 	Eigen::VectorXd p,v;
-	// p.resize(p_save.rows()-6);
-	// p = p_save.tail(p_save.rows()-6);
+	v = skel->getVelocities();
+	int posDim = (skel->getNumBodyNodes() - 1) * 6;
+	p.resize(posDim);
 
-	int n_bnodes = mCharacter->GetSkeleton()->getNumBodyNodes();
-	int num_p = (n_bnodes - 1) * 6;
-	p.resize(num_p);
-
-	for(int i = 1; i < n_bnodes; i++){
+	for(int i = 1; i < skel->getNumBodyNodes(); i++){
 		Eigen::Isometry3d transform = skel->getBodyNode(i)->getRelativeTransform();
-		// Eigen::Quaterniond q(transform.linear());
-		//	ret.segment<6>(6*i) << rot, transform.translation();
 		p.segment<6>(6*(i-1)) << transform.linear()(0,0), transform.linear()(0,1), transform.linear()(0,2),
 								 transform.linear()(1,0), transform.linear()(1,1), transform.linear()(1,2);
 	}
-
-	v = v_save;
-
 	dart::dynamics::BodyNode* root = skel->getRootBodyNode();
-	Eigen::Isometry3d cur_root_inv = root->getWorldTransform().inverse();
-
-	Eigen::Vector3d up_vec = root->getTransform().linear()*Eigen::Vector3d::UnitY();
-	double up_vec_angle = atan2(std::sqrt(up_vec[0]*up_vec[0]+up_vec[2]*up_vec[2]),up_vec[1]);
-
-	// The angles and velocity of end effector & root info
+	Eigen::Isometry3d curRootInv = root->getWorldTransform().inverse();
 	Eigen::VectorXd ee;
-	ee.resize(mEndEffectors.size()*3);
-	for(int i=0;i<mEndEffectors.size();i++)
+	ee.resize(mEndEffectors.size() * 3);
+
+
+	for(int i = 0; i < mEndEffectors.size(); i++)
 	{
-		Eigen::Isometry3d transform = cur_root_inv * skel->getBodyNode(mEndEffectors[i])->getWorldTransform();
+		Eigen::Isometry3d transform = curRootInv * skel->getBodyNode(mEndEffectors[i])->getWorldTransform();
 		ee.segment<3>(3*i) << transform.translation();
 	}
+
 	double t = mReferenceManager->GetTimeStep(mCurrentFrameOnPhase);
 
-	Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame+t);
-	Eigen::VectorXd p_now = p_v_target->GetPosition();
-	// The rotation and translation of end effector in the future(future 1 frame)
-	Eigen::VectorXd p_next = GetEndEffectorStatePosAndVel(p_now, p_v_target->GetVelocity()*t);
+	Motion* pvTarget = mReferenceManager->GetMotion(mCurrentFrame+t);
+	Eigen::VectorXd pNext = GetEndEffectorStatePosAndVel(pvTarget->GetPosition(), pvTarget->GetVelocity());
 
-	Eigen::VectorXd p_next2 = GetEndEffectorStatePosAndVel(p_now, p_v_target->GetVelocity()*2*t);
-	
-	delete p_v_target;
 
+	Eigen::Vector3d upvec = root->getTransform().linear()*Eigen::Vector3d::UnitY();
+	double upvecAngle = atan2(std::sqrt(upvec[0]*upvec[0]+upvec[2]*upvec[2]),upvec[1]);
 	double phase = ((int) mCurrentFrame % mReferenceManager->GetPhaseLength()) / (double) mReferenceManager->GetPhaseLength();
 	Eigen::VectorXd state;
-
-	double com_diff = 0;
 	
-	state.resize(p.rows()+v.rows()+1+1+p_next.rows()*2 +ee.rows());
-	state<< p, v, up_vec_angle, root_height, p_next,p_next2, ee;
+	state.resize(p.rows()+v.rows()+1+1+pNext.rows() +ee.rows());
+	state<< p, v, upvecAngle, root_height, pNext, ee;
+
+	delete pvTarget;
 
 	
 	return state;
+
+	
+	
 }
 
 bool
