@@ -4,8 +4,8 @@
 #define NEW_JOINTS
 #define FOOT_OFFSET (0.0)
 #define ROOT_HEIGHT_OFFSET (0.00)
-#define TERMINAL_ROOT_DIFF_THRESHOLD (0.8)
-#define TERMINAL_ROOT_DIFF_ANGLE_THRESHOLD (0.4*M_PI)
+#define TERMINAL_ROOT_DIFF_THRESHOLD (0.6)
+#define TERMINAL_ROOT_DIFF_ANGLE_THRESHOLD (0.5*M_PI)
 #define TERMINAL_ROOT_HEIGHT_LOWER_LIMIT (0.3)
 #define TERMINAL_ROOT_HEIGHT_UPPER_LIMIT (3.0)
 
@@ -16,8 +16,8 @@
 // #define CHARACTER_TYPE "humanoid_SFU"
 // #define REF_CHARACTER_TYPE "humanoid_SFU"
 
-#define CHARACTER_TYPE "mxm_gen"
-#define REF_CHARACTER_TYPE "mxm_gen"
+#define CHARACTER_TYPE "mxm_t3"
+#define REF_CHARACTER_TYPE "mxm_t3"
 
 // #define OBJECT_TYPE "up_box"
 #endif

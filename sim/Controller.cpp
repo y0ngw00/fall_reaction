@@ -4,7 +4,7 @@ using namespace dart::dynamics;
 namespace DPhy
 {
 
-Controller::Controller(ReferenceManager* ref, std::string character_path, bool record, int id)
+Controller::Controller(ReferenceManager* ref, std::string character_path, bool record, int id, bool test)
 	:mControlHz(30),mSimulationHz(150),mCurrentFrame(0),
 	w_p(0.35),w_v(0.1),w_ee(0.3),w_com(0.25),
 	terminationReason(-1),mIsNanAtTerminal(false), mIsTerminal(false)
@@ -15,6 +15,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	this->mRecord = record;
 	this->mReferenceManager = ref;
 	this->id = id;
+	this->mtest = test;
 
 	this->mCharacter = new DPhy::Character(character_path);
 	this->mWorld->addSkeleton(this->mCharacter->GetSkeleton());
@@ -86,6 +87,16 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	mRewardLabels.push_back("time");
 
 	if(mRecord) mReferenceManager->setRecord();
+	this->ext_force=0;
+	this->mHitFrame=0;
+
+	mTargetBody.clear();
+	mTargetBody.push_back("LeftShoulder");
+	mTargetBody.push_back("RightShoulder");
+	mTargetBody.push_back("Hips");
+	mTargetBody.push_back("Spine");
+	
+
 }
 
 void 
@@ -176,6 +187,27 @@ Step()
 		mWorld->step(false);	
 		mTimeElapsed += 1;
 	}
+
+	// if(isHit && this->mCurrentFrame>this->mHitFrame){
+	// 	// random element : force direction / hitting parts 
+	// 	//int numNode = mCharacter->GetSkeleton()->getNumBodyNodes();
+	// 	Eigen::Vector3d ext_pos(0,0,0);
+	// 	Eigen::Vector3d mForce = this->ext_force* this->ext_dir;
+
+	// 	int target = std::rand() % mTargetBody.size();
+
+	// 	if(this->mtest){
+	// 		mCharacter->GetSkeleton()->getBodyNode("Hips")->addExtForce(mForce, ext_pos);
+	// 	}
+
+	// 	else{
+	// 		mCharacter->GetSkeleton()->getBodyNode(mTargetBody[target])->addExtForce(mForce, ext_pos);
+	// 	}
+		
+	// 	mWorld->step(false);
+
+	// 	this->isHit = false;
+	// }
 
 	if(this->mCurrentFrameOnPhase > mReferenceManager->GetPhaseLength()){
 		this->mCurrentFrameOnPhase -= mReferenceManager->GetPhaseLength();
@@ -275,7 +307,7 @@ UpdateTerminalInfo()
 		mIsTerminal = true;
 		terminationReason = 5;
 	}
-	else if(mCurrentFrame > mReferenceManager->GetPhaseLength()*10) { // this->mBVH->GetMaxFrame() - 1.0){
+	else if(mCurrentFrame > mReferenceManager->GetPhaseLength()*6) { // this->mBVH->GetMaxFrame() - 1.0){
 		mIsTerminal = true;
 		terminationReason =  8;
 	}
@@ -350,10 +382,10 @@ GetTrackingReward(Eigen::VectorXd position, Eigen::VectorXd position2,
 	
 	double scale = 1.0;
 
-	double sig_p = 0.6 * scale; 
+	double sig_p = 0.3 * scale; 
 	double sig_v = 3.0 * scale;	
 	double sig_com = 0.2 * scale;		
-	double sig_ee = 0.5 * scale;		
+	double sig_ee = 0.2 * scale;		
 
 	double r_p = exp_of_squared(p_diff_reward,sig_p);
 	double r_v;
@@ -659,6 +691,10 @@ Reset(bool RSI)
 	// right_detached= (mCurrentFrame >=51) ? true: false;
 
 	// min_hand = 10000;
+	// SetRandomForce();
+
+	
+
 
 
 }
@@ -697,6 +733,38 @@ CheckCollisionWithGround(std::string bodyName){
 		std::cout << "check collision : bad body name" << std::endl;
 		return false;
 	}
+}
+
+void 
+Controller::
+SetRandomForce(){
+	int UnitFrame = this->mReferenceManager->GetPhaseLength();
+	this->mHitFrame = UnitFrame*2;
+
+	if(std::rand()%3==0){
+		this->isHit = true;
+	}
+	this->ext_force = std::rand()%(300);
+
+	int dir_idx = std::rand()%(2);
+	switch(dir_idx){
+		case 0:
+			this->ext_dir = Eigen::Vector3d::UnitZ();
+			break;
+		case 1:
+			this->ext_dir = -Eigen::Vector3d::UnitZ();
+			break;
+
+	}
+
+	if(mtest){
+		
+		this->isHit = true;
+		this->ext_force = 250;
+		this->ext_dir = Eigen::Vector3d::UnitZ();
+
+	}
+	
 }
 
 

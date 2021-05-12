@@ -7,9 +7,13 @@ MainInterface::
 MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 {
 
+	std::srand(std::time(0));
 	this->character_path = std::string(PROJECT_DIR)+std::string("/character/") + std::string(REF_CHARACTER_TYPE) + std::string(".xml");
 
 	this->frame_no = 0;
+
+	this->mag_force =50;
+	this->MAX_FORCE =50;
 	
 	mCamera = new Camera();
 
@@ -61,11 +65,12 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 
 		initNetworkSetting(ppo);
 		this->render_sim=true;
+
+
+		
+		this-> forceframe = mController->GetForceFrame();
 		
 	}
-
-
-	
 
 
 }
@@ -84,6 +89,11 @@ display()
 	DrawGround();
 
 	DrawSkeletons();
+	if(this->mCurFrame > (this->forceframe - 10)){
+		DrawForce();
+	}
+
+	
 	glutSwapBuffers();
 
 	
@@ -100,6 +110,28 @@ SetFrame(int n)
 		mSkel->setPositions(mMotion_bvh[n]);
 	if(render_sim) 
 		mSkel_sim->setPositions(mMotion_sim[n]);
+}
+
+void
+MainInterface::
+DrawForce()
+{
+	int targetNode = 0;
+	Eigen::Vector3d force_dir = mController->GetForceDir();
+	double force = mController->GetForceSize();
+	double length = 5;
+	double thickness = 3;
+
+	Eigen::Vector3d color = {255,0,0};
+	double arrowThickness = 5;
+
+	Eigen::Vector3d target_pos = mSkel_sim->getBodyNode(targetNode)->getWorldTransform().translation();
+
+	Eigen::Vector3d origin = target_pos - force_dir * length * 10; 
+	GUI::DrawArrow3D(origin, force_dir,
+            length, thickness,color, thickness);
+
+
 }
 
 void
@@ -164,7 +196,7 @@ initNetworkSetting(std::string ppo) {
   //   	}
     	if(ppo != "") {
     		//if (reg!="") this->mController = new DPhy::Controller(mReferenceManager, true, true, true);
-    		this->mController = new DPhy::Controller(mReferenceManager, this->character_path,true); //adaptive=true, bool parametric=true, bool record=true
+    		this->mController = new DPhy::Controller(mReferenceManager, this->character_path,true, true); //adaptive=true, bool parametric=true, bool record=true
 			//mController->SetGoalParameters(mReferenceManager->GetParamCur());
 
 			py::object sys_module = py::module::import("sys");
@@ -203,7 +235,9 @@ RunPPO() {
 		py::array_t<double> na = this->mPPO.attr("run")(DPhy::toNumPyArray(state));
 		Eigen::VectorXd action = DPhy::toEigenVector(na, this->mController->GetNumAction());
 
+		// if(count==30)mController->SetRandomForce(this->mag_force);
 		this->mController->SetAction(action);
+		
 		this->mController->Step();
 		this->mTiming.push_back(this->mController->GetCurrentLength());
 		
@@ -232,6 +266,7 @@ RunPPO() {
 	//UpdateMotion(pos_reg, "reg");
 
 }
+
 void 
 MainInterface::
 UpdateMotion(std::vector<Eigen::VectorXd> motion, const char* type)
@@ -344,8 +379,10 @@ keyboard(unsigned char key, int mx, int my)
 		this->render_bvh = (this->render_bvh == false);
 	if (key == '2')
 		this->render_sim = (this->render_sim == false);
-	if (key == 'r')
+	if (key == 'r'){
 		Reset();
+		on_animation = false;
+	}
 	// // change animation mode
 	if (key == 'v') {
 		if(!this->isRecord){
@@ -360,7 +397,12 @@ keyboard(unsigned char key, int mx, int my)
         }
     }
 	if (key == 's') 
-		glRecordInitialize();	
+		glRecordInitialize();
+	// if (key == 'R') {
+
+	// 	RunPPO();
+	// 	Reset();
+	// }	
 	// // change animation mode
 	// if (key == 'a') {
 	// 	animation_flag = (animation_flag + 1) % 5;
@@ -374,9 +416,13 @@ keyboard(unsigned char key, int mx, int my)
 	// 	animation_scale -= animation_scale_step;
 	// 	if (animation_scale < animation_scale_min) animation_scale = animation_scale_min;
 	// }
-	// if (key == '+' || key == '=') {
-	// 	animation_scale += animation_scale_step;
-	// 	if (animation_scale > animation_scale_max) animation_scale = animation_scale_max;
+	// if (key == '+') {
+	// 	mag_force += 1;
+	// 	if (mag_force > MAX_FORCE) mag_force = MAX_FORCE;
+	// }
+	// if (key == '-') {
+	// 	mag_force -=1;
+	// 	if (mag_force < 1) mag_force = 1;
 	// }
 
 

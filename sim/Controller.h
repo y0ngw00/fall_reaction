@@ -19,7 +19,7 @@ namespace DPhy
 class Controller
 {
 public:
-	Controller(ReferenceManager* ref, std::string character_path, bool record=false, int id=0);
+	Controller(ReferenceManager* ref, std::string character_path, bool record=false, int id=0,bool test=false);
 
 	
 	void initPhysicsEnv();
@@ -74,8 +74,12 @@ public:
 	std::pair<bool, bool> GetFootContact(int idx) { return this->mRecordFootContact[idx]; }
 	std::vector<double> GetRewardByParts() {return mRewardParts; } 
 
-
+	void SetRandomForce();
 	void SaveDisplayedData(std::string directory, bool bvh);
+
+	Eigen::Vector3d GetForceDir(){return this->ext_dir;}
+	double GetForceSize() {return this->ext_force;}
+	int GetForceFrame() {return this->mHitFrame;}
 
 
 
@@ -151,7 +155,12 @@ protected:
 	Eigen::Vector3d mRootZeroDiff; //root 0th frame
 	Eigen::Vector3d mStartFoot; //middle of two feet at 0th frame
 
-
+	bool mtest;
+	bool isHit=false;
+	int mHitFrame;
+	int ext_force;
+	Eigen::Vector3d ext_dir;
+	std::vector<std::string> mTargetBody;
 
 };
 }

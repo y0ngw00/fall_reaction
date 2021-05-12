@@ -19,6 +19,7 @@ int main(int argc, char ** argv)
 	std::cout<<"ESC : exit"<<std::endl;
 
 	std::string ppo="", bvh="", reg="";
+
        static struct option long_options[] =
     {
     {"bvh", required_argument,        0, '1'},
@@ -42,6 +43,7 @@ int main(int argc, char ** argv)
 
 	           case '2':
 	              ppo = optarg;
+
 	   			  break; 
        	}
     }

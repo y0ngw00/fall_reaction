@@ -46,6 +46,9 @@ public:
  	void UpdateMotion(std::vector<Eigen::VectorXd> motion, const char* type);
  	void RunPPO();
 
+ 	void SetRandomForce();
+ 	void DrawForce();
+
 	
 protected:
 
@@ -53,6 +56,7 @@ protected:
 	//BVH* 			current_bvh;
 	DPhy::ReferenceManager*			mReferenceManager;
 	DPhy::Controller* 				mController;
+	
 
 	std::string character_path;
 
@@ -86,6 +90,10 @@ protected:
 
 	//p::object 						mRegression;
 	py::object 						mPPO;
+
+	int mag_force;
+	int MAX_FORCE;
+	int forceframe;
 
 
 

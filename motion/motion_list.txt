@@ -1,1 +1,1 @@
-mxm_walk.bvh
+mxm_stopandgo.bvh
