@@ -85,11 +85,11 @@ display()
 	glLoadIdentity();
 
 	mCamera->viewupdate();
-
+	DrawStatus();
 	DrawGround();
 
 	DrawSkeletons();
-	if(this->mCurFrame > (this->forceframe - 10)){
+	if(this->mCurFrame > (this->forceframe - 10) && this->mCurFrame < (this->forceframe + 30)){
 		DrawForce();
 	}
 
@@ -111,11 +111,18 @@ SetFrame(int n)
 	if(render_sim) 
 		mSkel_sim->setPositions(mMotion_sim[n]);
 }
+void
+MainInterface::
+DrawStatus(){
+	std::string text= std::string("Frame : ") + std::to_string(this->mCurFrame);
+	GUI::DrawStringOnScreen(0.8, 0.9, text,true,Eigen::Vector3d(0.1,0.1,0.1));
+}
 
 void
 MainInterface::
 DrawForce()
 {
+	
 	int targetNode = 0;
 	Eigen::Vector3d force_dir = mController->GetForceDir();
 	double force = mController->GetForceSize();
@@ -123,13 +130,13 @@ DrawForce()
 	double thickness = 3;
 
 	Eigen::Vector3d color = {255,0,0};
-	double arrowThickness = 5;
 
 	Eigen::Vector3d target_pos = mSkel_sim->getBodyNode(targetNode)->getWorldTransform().translation();
 
-	Eigen::Vector3d origin = target_pos - force_dir * length * 10; 
-	GUI::DrawArrow3D(origin, force_dir,
-            length, thickness,color, thickness);
+	Eigen::Vector3d origin = target_pos - force_dir *0.5; 
+	// GUI::DrawArrow3D(origin, force_dir,
+ //            length, thickness,color);
+	GUI::DrawArrow3D(origin, force_dir.normalized(),0.3, 0.03,color);
 
 
 }

@@ -48,6 +48,7 @@ public:
 
  	void SetRandomForce();
  	void DrawForce();
+ 	void DrawStatus();
 
 	
 protected:

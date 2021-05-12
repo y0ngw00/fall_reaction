@@ -89,6 +89,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	if(mRecord) mReferenceManager->setRecord();
 	this->ext_force=0;
 	this->mHitFrame=0;
+	this->ext_dir = {1,0,0};
 
 	mTargetBody.clear();
 	mTargetBody.push_back("LeftShoulder");
