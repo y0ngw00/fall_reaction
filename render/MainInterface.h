@@ -47,7 +47,7 @@ public:
  	void RunPPO();
 
  	void SetRandomForce();
- 	void DrawForce();
+ 	void DrawSlipboard();
  	void DrawStatus();
 
 	
@@ -64,6 +64,8 @@ protected:
 	dart::dynamics::SkeletonPtr 	mSkel;
 	dart::dynamics::SkeletonPtr 	mSkel_reg;
 	dart::dynamics::SkeletonPtr 	mSkel_sim;
+
+	dart::dynamics::SkeletonPtr 	mGround;
 
 	int     drag_mouse_r;
 	int     drag_mouse_l;

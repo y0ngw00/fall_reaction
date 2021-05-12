@@ -48,6 +48,7 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 	//this->mTotalFrame = mReferenceManager->GetPhaseLength();
 	this->mTotalFrame = 1000;
 
+	
 	if(bvh!=""){
 		this->mSkel = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
 		DPhy::SetSkeletonColor(mSkel, Eigen::Vector4d(164./255., 235./255.,	243./255., 1.0));
@@ -68,8 +69,6 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 
 
 		
-		this-> forceframe = mController->GetForceFrame();
-		
 	}
 
 
@@ -87,11 +86,9 @@ display()
 	mCamera->viewupdate();
 	DrawStatus();
 	DrawGround();
-
+	DrawSlipboard();
 	DrawSkeletons();
-	if(this->mCurFrame > (this->forceframe - 10) && this->mCurFrame < (this->forceframe + 30)){
-		DrawForce();
-	}
+	
 
 	
 	glutSwapBuffers();
@@ -120,23 +117,12 @@ DrawStatus(){
 
 void
 MainInterface::
-DrawForce()
+DrawSlipboard()
 {
 	
-	int targetNode = 0;
-	Eigen::Vector3d force_dir = mController->GetForceDir();
-	double force = mController->GetForceSize();
-	double length = 5;
-	double thickness = 3;
-
-	Eigen::Vector3d color = {255,0,0};
-
-	Eigen::Vector3d target_pos = mSkel_sim->getBodyNode(targetNode)->getWorldTransform().translation();
-
-	Eigen::Vector3d origin = target_pos - force_dir *0.5; 
-	// GUI::DrawArrow3D(origin, force_dir,
- //            length, thickness,color);
-	GUI::DrawArrow3D(origin, force_dir.normalized(),0.3, 0.03,color);
+    dart::dynamics::SkeletonPtr board = this->mController->GetSlipboard();
+    DPhy::SetSkeletonColor(board, Eigen::Vector4d(255./255., 255./255.,	255./255., 0.8));
+    GUI::DrawSkeleton(board);
 
 
 }

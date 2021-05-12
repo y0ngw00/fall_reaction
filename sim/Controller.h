@@ -74,17 +74,16 @@ public:
 	std::pair<bool, bool> GetFootContact(int idx) { return this->mRecordFootContact[idx]; }
 	std::vector<double> GetRewardByParts() {return mRewardParts; } 
 
-	void SetRandomForce();
 	void SaveDisplayedData(std::string directory, bool bvh);
 
-	Eigen::Vector3d GetForceDir(){return this->ext_dir;}
-	double GetForceSize() {return this->ext_force;}
-	int GetForceFrame() {return this->mHitFrame;}
 
+	void CreateSlip(dart::dynamics::SkeletonPtr ground,Eigen::Vector3d pos, Eigen::Vector3d size, double friction_coeff, double mass);
+	const dart::dynamics::SkeletonPtr& GetSlipboard() {return this->mSlip;}
 
 
 protected:
 	dart::dynamics::SkeletonPtr mGround;
+	dart::dynamics::SkeletonPtr mSlip;
 	dart::simulation::WorldPtr mWorld;
 	Character* mCharacter;
 	ReferenceManager* mReferenceManager;
@@ -135,7 +134,7 @@ protected:
 	std::vector<std::string> mEndEffectors;
 	std::vector<std::string> mRewardLabels;
 
-	std::unique_ptr<dart::collision::CollisionGroup> mCGEL, mCGER, mCGL, mCGR, mCGG, mCGHR, mCGHL, mCGOBJ; 
+	std::unique_ptr<dart::collision::CollisionGroup> mCGEL, mCGER, mCGL, mCGR, mCGG, mCGHR, mCGHL, mCGB; 
 
 	double mAdaptiveStep;
 	int mRewardDof;

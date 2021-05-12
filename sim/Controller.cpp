@@ -19,6 +19,12 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 
 	this->mCharacter = new DPhy::Character(character_path);
 	this->mWorld->addSkeleton(this->mCharacter->GetSkeleton());
+
+	this->mSlip = dart::dynamics::Skeleton::create("Slip");
+	CreateSlip(this->mSlip,Eigen::Vector3d(0.0,-0.20,1.2), Eigen::Vector3d(1.0,0.5,0.1),0.5,1000);
+
+	
+	
 	this->mPath = character_path;
 
 	this->mMass = mCharacter->GetSkeleton()->getMass();
@@ -51,6 +57,8 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	this->mCGHL = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("LeftHand"));
 	this->mCGHR = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("RightHand"));
 	this->mCGG = collisionEngine->createCollisionGroup(this->mGround.get());
+
+	this->mCGB = collisionEngine->createCollisionGroup(this->mSlip.get());
 	int num_body_nodes = mInterestedDof / 3;
 	int dof = this->mCharacter->GetSkeleton()->getNumDofs(); 
 	
@@ -87,15 +95,14 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	mRewardLabels.push_back("time");
 
 	if(mRecord) mReferenceManager->setRecord();
-	this->ext_force=0;
-	this->mHitFrame=0;
-	this->ext_dir = {1,0,0};
 
-	mTargetBody.clear();
-	mTargetBody.push_back("LeftShoulder");
-	mTargetBody.push_back("RightShoulder");
-	mTargetBody.push_back("Hips");
-	mTargetBody.push_back("Spine");
+	
+	this->mWorld->addSkeleton(this->mSlip);
+	bool slip_collision = CheckCollisionWithGround("Slipboard_R") || CheckCollisionWithGround("Slipboard_L");
+
+	if(slip_collision)
+		std::cout<<"Slipboard is collided with ground!"<<std::endl;
+
 	
 
 }
@@ -243,6 +250,8 @@ SaveStepInfo()
 
 	bool rightContact = CheckCollisionWithGround("RightFoot") || CheckCollisionWithGround("RightToe");
 	bool leftContact = CheckCollisionWithGround("LeftFoot") || CheckCollisionWithGround("LeftToe");
+
+
 
 	mRecordFootContact.push_back(std::make_pair(rightContact, leftContact));
 
@@ -730,42 +739,50 @@ CheckCollisionWithGround(std::string bodyName){
 		bool isCollide = collisionEngine->collide(this->mCGHL.get(), this->mCGG.get(), option, &result);
 		return isCollide;
 	}
+	else if(bodyName == "Slipboard_R"){
+		bool isCollide_1 = collisionEngine->collide(this->mCGB.get(), this->mCGR.get(), option, &result);
+		bool isCollide_2 = collisionEngine->collide(this->mCGB.get(), this->mCGER.get(), option, &result);
+		bool isCollide = isCollide_1 || isCollide_2;
+		return isCollide;
+	}
+	else if(bodyName == "Slipboard_L"){
+		bool isCollide_1 = collisionEngine->collide(this->mCGB.get(), this->mCGL.get(), option, &result);
+		bool isCollide_2 = collisionEngine->collide(this->mCGB.get(), this->mCGEL.get(), option, &result);
+		bool isCollide = isCollide_1 || isCollide_2;
+		return isCollide;
+	}
 	else{ // error case
 		std::cout << "check collision : bad body name" << std::endl;
 		return false;
 	}
 }
 
+
 void 
 Controller::
-SetRandomForce(){
-	int UnitFrame = this->mReferenceManager->GetPhaseLength();
-	this->mHitFrame = UnitFrame*2;
+CreateSlip(dart::dynamics::SkeletonPtr ground,Eigen::Vector3d pos, Eigen::Vector3d size, double friction_coeff, double mass){
 
-	if(std::rand()%3==0){
-		this->isHit = true;
-	}
-	this->ext_force = std::rand()%(300);
+	dart::dynamics::BodyNode* bn = ground->createJointAndBodyNodePair<dart::dynamics::FreeJoint>(nullptr).second;
+	dart::dynamics::ShapePtr shape = std::shared_ptr<dart::dynamics::BoxShape>(new dart::dynamics::BoxShape(size));
 
-	int dir_idx = std::rand()%(2);
-	switch(dir_idx){
-		case 0:
-			this->ext_dir = Eigen::Vector3d::UnitZ();
-			break;
-		case 1:
-			this->ext_dir = -Eigen::Vector3d::UnitZ();
-			break;
 
-	}
+	dart::dynamics::Inertia inertia;
+	inertia.setMass(mass);
+	inertia.setMoment(shape->computeInertia(mass));
 
-	if(mtest){
-		
-		this->isHit = true;
-		this->ext_force = 250;
-		this->ext_dir = Eigen::Vector3d::UnitZ();
+	bn->createShapeNodeWith<VisualAspect,CollisionAspect,DynamicsAspect>(shape);
+    bn->setFrictionCoeff(friction_coeff);
+	bn->setInertia(inertia);
 
-	}
-	
+	Eigen::Vector6d slip_pos(Eigen::Vector6d::Zero());
+
+
+	//Translation
+	slip_pos[3]=pos[0];
+	slip_pos[4]=pos[1];
+	slip_pos[5]=pos[2];
+
+	ground->getJoint(0)->setPositions(slip_pos);
 }
 
 
