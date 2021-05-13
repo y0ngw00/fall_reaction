@@ -77,8 +77,8 @@ public:
 	void SaveDisplayedData(std::string directory, bool bvh);
 
 
-	void CreateSlip(dart::dynamics::SkeletonPtr ground,Eigen::Vector3d pos, Eigen::Vector3d size, double friction_coeff, double mass);
-	const dart::dynamics::SkeletonPtr& GetSlipboard() {return this->mSlip;}
+	void CreateSlip(dart::dynamics::SkeletonPtr ground);
+	Eigen::VectorXd GetObjPositions(int idx) { return this->mRecordObjPosition[idx]; }
 
 
 protected:
@@ -144,6 +144,7 @@ protected:
 	std::vector<Eigen::VectorXd> mRecordVelocity;
 	std::vector<Eigen::Vector3d> mRecordCOM;
 	std::vector<Eigen::VectorXd> mRecordTargetPosition;
+	std::vector<Eigen::VectorXd> mRecordObjPosition;
 	std::vector<Eigen::VectorXd> mRecordBVHPosition;
 	std::vector<double> mRecordPhase;
 	std::vector<std::pair<bool, bool>> mRecordFootContact;

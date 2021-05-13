@@ -33,6 +33,9 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
     mReferenceManager = new DPhy::ReferenceManager(ref);
     mReferenceManager->LoadMotionFromBVH(std::string("/motion/") + bvh);
 
+
+	this-> mBoard = dart::dynamics::Skeleton::create("Slip");
+
     std::vector<Eigen::VectorXd> pos;
 	
 	phase = 0;
@@ -66,10 +69,9 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 
 		initNetworkSetting(ppo);
 		this->render_sim=true;
-
-
-		
 	}
+	
+
 
 
 }
@@ -86,7 +88,7 @@ display()
 	mCamera->viewupdate();
 	DrawStatus();
 	DrawGround();
-	DrawSlipboard();
+
 	DrawSkeletons();
 	
 
@@ -103,10 +105,15 @@ void
 MainInterface::
 SetFrame(int n)
 {
+
 	if(render_bvh)
 		mSkel->setPositions(mMotion_bvh[n]);
 	if(render_sim) 
 		mSkel_sim->setPositions(mMotion_sim[n]);
+
+	if(render_obj)
+		mBoard->setPositions(mMotion_obj[n]);
+
 }
 void
 MainInterface::
@@ -115,17 +122,7 @@ DrawStatus(){
 	GUI::DrawStringOnScreen(0.8, 0.9, text,true,Eigen::Vector3d(0.1,0.1,0.1));
 }
 
-void
-MainInterface::
-DrawSlipboard()
-{
-	
-    dart::dynamics::SkeletonPtr board = this->mController->GetSlipboard();
-    DPhy::SetSkeletonColor(board, Eigen::Vector4d(255./255., 255./255.,	255./255., 0.8));
-    GUI::DrawSkeleton(board);
 
-
-}
 
 void
 MainInterface::
@@ -135,8 +132,11 @@ DrawSkeletons()
 	glTranslated(0.0, 0, 0);
 	if(render_bvh)
 		GUI::DrawSkeleton(this->mSkel, 0);
-	if(render_sim)
+	if(render_sim){
 		GUI::DrawSkeleton(this->mSkel_sim, 0);
+	}
+	if(render_obj)
+		GUI::DrawSkeleton(this->mBoard,Eigen::Vector3d(255./255., 255./255.,	255./255.),0);
 	glPopMatrix();
 }	
 
@@ -202,6 +202,9 @@ initNetworkSetting(std::string ppo) {
 			this->mPPO.attr("initRun")(path,
 									   this->mController->GetNumState(), 
 									   this->mController->GetNumAction());
+
+			this->mController->CreateSlip(this->mBoard);
+
 			RunPPO();
     	}
     
@@ -213,6 +216,7 @@ void
 MainInterface::
 RunPPO() {
 	this->render_sim = true;
+	this->render_obj = true;
 	std::vector<Eigen::VectorXd> pos_bvh;
 	std::vector<Eigen::VectorXd> pos_reg;
 	std::vector<Eigen::VectorXd> pos_sim;
@@ -232,6 +236,7 @@ RunPPO() {
 		this->mController->SetAction(action);
 		
 		this->mController->Step();
+
 		this->mTiming.push_back(this->mController->GetCurrentLength());
 		
 		count += 1;
@@ -244,11 +249,11 @@ RunPPO() {
 		Eigen::VectorXd position_bvh = this->mController->GetBVHPositions(i);
 		position_bvh[3]-=1.5;
 
-		//Eigen::VectorXd position_obj = this->mController->GetObjPositions(i);
+		Eigen::VectorXd position_obj = this->mController->GetObjPositions(i);
 
-		//pos_reg.push_back(position_reg);
 		pos_sim.push_back(position);
 		pos_bvh.push_back(position_bvh);
+		pos_obj.push_back(position_obj);
 		
 	}
 	// Eigen::VectorXd root_bvh = mReferenceManager->GetPosition(0, false);
@@ -256,7 +261,8 @@ RunPPO() {
 	// pos_reg =  DPhy::Align(pos_reg, root_bvh);
 	UpdateMotion(pos_bvh, "bvh");
 	UpdateMotion(pos_sim, "sim");
-	//UpdateMotion(pos_reg, "reg");
+	UpdateMotion(pos_obj, "obj");
+
 
 }
 
@@ -272,6 +278,9 @@ UpdateMotion(std::vector<Eigen::VectorXd> motion, const char* type)
 	}
 	else if(!strcmp(type,"reg")) {
 		mMotion_reg = motion;	
+	}
+	else if(!strcmp(type,"obj")) {
+		mMotion_obj = motion;	
 	}
 	// else if(type == 3) {
 	// 	mMotion_exp = motion;	
@@ -418,62 +427,6 @@ keyboard(unsigned char key, int mx, int my)
 	// 	if (mag_force < 1) mag_force = 1;
 	// }
 
-
-}
-
-void
-MainInterface::
-skeyboard(int key, int x, int y)
-{
-
-	// if(on_animation) {
- //        if (key == GLUT_KEY_LEFT) {
- //        	std::cout<<"LEFT"<<std::endl;
- //            if(speed_type ==0)return;
- //            BVH *temp_bvh = current_bvh;
- //            if (motion_type == 0)
- //                motion_type = mCharacter->getMotionrange() - 1;
- //            else
- //                motion_type--;
- //            current_bvh = mCharacter->getBVH(speed_type, motion_type);
- //            current_bvh = mCharacter->MotionBlend(frame_no, temp_bvh, current_bvh);
- //            begin = std::chrono::steady_clock::now();
- //        }
- //        if (key == GLUT_KEY_RIGHT) {
- //        	std::cout<<"RIGHT"<<std::endl;
- //            if(speed_type ==0)return;
- //            BVH *temp_bvh = current_bvh;
- //            if (motion_type == mCharacter->getMotionrange() - 1)
- //                motion_type = 0;
- //            else
- //                motion_type++;
- //            current_bvh = mCharacter->getBVH(speed_type, motion_type);
- //            current_bvh = mCharacter->MotionBlend(frame_no,temp_bvh, current_bvh);
- //            begin = std::chrono::steady_clock::now();
- //        }
- //        if (key == GLUT_KEY_UP) {
- //        	std::cout<<"UP"<<std::endl;
- //            BVH *temp_bvh = current_bvh;
- //            if (speed_type == mCharacter->getSpeedrange() - 1)
- //                speed_type = 0;
- //            else
- //                speed_type++;
- //            current_bvh = mCharacter->getBVH(speed_type, motion_type);
- //            current_bvh = mCharacter->MotionBlend(frame_no,temp_bvh, current_bvh);
- //            begin = std::chrono::steady_clock::now();
- //        }
- //        if (key == GLUT_KEY_DOWN) {
- //        	std::cout<<"DOWN"<<std::endl;
- //            BVH *temp_bvh = current_bvh;
- //            if (speed_type == 0)
- //                speed_type = mCharacter->getSpeedrange() - 1;
- //            else
- //                speed_type--;
- //            current_bvh = mCharacter->getBVH(speed_type, motion_type);
- //            current_bvh = mCharacter->MotionBlend(frame_no,temp_bvh, current_bvh);
- //            begin = std::chrono::steady_clock::now();
- //        }
- //    }
 
 }
 

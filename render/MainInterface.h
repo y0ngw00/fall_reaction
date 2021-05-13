@@ -34,7 +34,6 @@ public:
 	void motion(int mx, int my); 
 	void mouse(int button, int state, int mx, int my);
 	void keyboard(unsigned char key, int mx, int my);
-	void skeyboard(int key, int x, int y);
 	void reshape(int w, int h);
 	void Timer(int value);
 	void Reset();
@@ -47,7 +46,6 @@ public:
  	void RunPPO();
 
  	void SetRandomForce();
- 	void DrawSlipboard();
  	void DrawStatus();
 
 	
@@ -66,6 +64,7 @@ protected:
 	dart::dynamics::SkeletonPtr 	mSkel_sim;
 
 	dart::dynamics::SkeletonPtr 	mGround;
+	dart::dynamics::SkeletonPtr 	mBoard;
 
 	int     drag_mouse_r;
 	int     drag_mouse_l;
@@ -77,6 +76,8 @@ protected:
 	std::vector<Eigen::VectorXd> mMotion_bvh;
 	std::vector<Eigen::VectorXd> mMotion_sim;
 	std::vector<Eigen::VectorXd> mMotion_reg;
+
+	std::vector<Eigen::VectorXd> mMotion_obj;
 
 	int mx;
 	int my;
@@ -102,6 +103,8 @@ protected:
 
 	bool render_bvh=false;
 	bool render_sim=false;
+	bool render_obj=false;
+
 
 	
 	bool isRecord=false;

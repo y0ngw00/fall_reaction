@@ -31,7 +31,6 @@ GLInitWindow(const char* _name)
 	glutDisplayFunc(DisplayEvent);
 	glutReshapeFunc(ReshapeEvent);
 	glutKeyboardFunc(KeyboardEvent);
-	glutSpecialFunc(SKeyboardEvent);
 	glutMouseFunc(MouseEvent);
 	glutMotionFunc(MotionEvent);
 	
@@ -135,12 +134,7 @@ KeyboardEvent(unsigned char key,int x,int y)
 {
 	current()->keyboard(key,x,y);
 }
-void
-GLUTWindow::
-SKeyboardEvent(int key,int x,int y)
-{
-	current()->skeyboard(key,x,y);
-}
+
 void
 GLUTWindow::
 MouseEvent(int button, int state, int x, int y)

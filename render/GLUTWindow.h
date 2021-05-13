@@ -22,7 +22,6 @@ public:
 	static GLUTWindow* current();
 	static void DisplayEvent();
 	static void KeyboardEvent(unsigned char key,int x,int y);
-	static void SKeyboardEvent(int key,int x,int y);
 	static void MouseEvent(int button, int state, int x, int y);
 	static void MotionEvent(int x, int y);
 	static void ReshapeEvent(int w, int h);
@@ -42,7 +41,6 @@ protected:
 	virtual void motion(int mx, int my)=0; 
 	virtual void mouse(int button, int state, int mx, int my)=0;
 	virtual void keyboard(unsigned char key, int mx, int my)=0;
-	virtual void skeyboard(int key, int x, int y)=0;
 	virtual void Timer(int value)=0;
 	virtual void reshape(int w, int h)=0;
 protected:

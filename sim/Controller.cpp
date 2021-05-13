@@ -21,7 +21,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	this->mWorld->addSkeleton(this->mCharacter->GetSkeleton());
 
 	this->mSlip = dart::dynamics::Skeleton::create("Slip");
-	CreateSlip(this->mSlip,Eigen::Vector3d(0.0,-0.20,1.2), Eigen::Vector3d(1.0,0.5,0.1),0.5,1000);
+	CreateSlip(this->mSlip);
 
 	
 	
@@ -129,6 +129,10 @@ Step()
 		std::cout<<mCurrentFrame<<" , Terminal state"<<std::endl;
 		return;
 	}
+	// Eigen::VectorXd Slip_pos = this->mSlip->getPositions();
+
+	// Slip_pos[3]+=0.1;
+	// this->mSlip->setPositions(Slip_pos);
 
 	Eigen::VectorXd s = this->GetState();
 
@@ -248,6 +252,8 @@ SaveStepInfo()
 	mRecordCOM.push_back(mCharacter->GetSkeleton()->getCOM());
 	mRecordPhase.push_back(mCurrentFrame);
 
+	mRecordObjPosition.push_back(this->mSlip->getPositions());
+
 	bool rightContact = CheckCollisionWithGround("RightFoot") || CheckCollisionWithGround("RightToe");
 	bool leftContact = CheckCollisionWithGround("LeftFoot") || CheckCollisionWithGround("LeftToe");
 
@@ -309,7 +315,7 @@ UpdateTerminalInfo()
 	}
 
 	double cur_height_limit = TERMINAL_ROOT_HEIGHT_UPPER_LIMIT;
-	if(!mRecord && root_y<TERMINAL_ROOT_HEIGHT_LOWER_LIMIT || root_y > cur_height_limit){
+	if(root_y<TERMINAL_ROOT_HEIGHT_LOWER_LIMIT || root_y > cur_height_limit){
 		mIsTerminal = true;
 		terminationReason = 1;
 	}
@@ -339,6 +345,7 @@ ClearRecord()
 	this->mRecordPosition.clear();
 	this->mRecordCOM.clear();
 	this->mRecordTargetPosition.clear();
+	this->mRecordObjPosition.clear();
 	this->mRecordBVHPosition.clear();
 	this->mRecordPhase.clear();
 	this->mRecordFootContact.clear();
@@ -760,11 +767,15 @@ CheckCollisionWithGround(std::string bodyName){
 
 void 
 Controller::
-CreateSlip(dart::dynamics::SkeletonPtr ground,Eigen::Vector3d pos, Eigen::Vector3d size, double friction_coeff, double mass){
+CreateSlip(dart::dynamics::SkeletonPtr ground){
 
+
+	Eigen::Vector3d pos = Eigen::Vector3d(0.0,0.025,1.5);
+	Eigen::Vector3d size = Eigen::Vector3d(0.3,0.02,0.3);
+	double friction_coeff = 0.1;
+	double mass = 1000;
 	dart::dynamics::BodyNode* bn = ground->createJointAndBodyNodePair<dart::dynamics::FreeJoint>(nullptr).second;
 	dart::dynamics::ShapePtr shape = std::shared_ptr<dart::dynamics::BoxShape>(new dart::dynamics::BoxShape(size));
-
 
 	dart::dynamics::Inertia inertia;
 	inertia.setMass(mass);
