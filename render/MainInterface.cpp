@@ -203,7 +203,7 @@ initNetworkSetting(std::string ppo) {
   //   	}
     	if(ppo != "") {
     		//if (reg!="") this->mController = new DPhy::Controller(mReferenceManager, true, true, true);
-    		this->mController = new DPhy::Controller(mReferenceManager, this->character_path,true, true); //adaptive=true, bool parametric=true, bool record=true
+    		this->mController = new DPhy::Controller(mReferenceManager, this->character_path,true,0, true); //adaptive=true, bool parametric=true, bool record=true
 			//mController->SetGoalParameters(mReferenceManager->GetParamCur());
 
 			py::object sys_module = py::module::import("sys");

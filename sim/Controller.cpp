@@ -189,26 +189,26 @@ Step()
 		mTimeElapsed += 1;
 	}
 
-	// if(isHit && this->mCurrentFrame>this->mHitFrame){
-	// 	// random element : force direction / hitting parts 
-	// 	//int numNode = mCharacter->GetSkeleton()->getNumBodyNodes();
-	// 	Eigen::Vector3d ext_pos(0,0,0);
-	// 	Eigen::Vector3d mForce = this->ext_force* this->ext_dir;
+	if(isHit && this->mCurrentFrame>(this->mHitFrame-1)&& this->mCurrentFrame<(this->mHitFrame+1)){
+		// random element : force direction / hitting parts 
+		//int numNode = mCharacter->GetSkeleton()->getNumBodyNodes();
+		Eigen::Vector3d ext_pos(0,0,0);
+		Eigen::Vector3d mForce = this->ext_force* this->ext_dir;
 
-	// 	int target = std::rand() % mTargetBody.size();
+		int target = std::rand() % mTargetBody.size();
 
-	// 	if(this->mtest){
-	// 		mCharacter->GetSkeleton()->getBodyNode("Hips")->addExtForce(mForce, ext_pos);
-	// 	}
+		if(this->mtest){
+			mCharacter->GetSkeleton()->getBodyNode("Spine2")->addExtForce(mForce, ext_pos);
+		}
 
-	// 	else{
-	// 		mCharacter->GetSkeleton()->getBodyNode(mTargetBody[target])->addExtForce(mForce, ext_pos);
-	// 	}
+		else{
+			mCharacter->GetSkeleton()->getBodyNode(mTargetBody[target])->addExtForce(mForce, ext_pos);
+		}
 		
-	// 	mWorld->step(false);
+		mWorld->step(false);
 
-	// 	this->isHit = false;
-	// }
+		this->isHit = false;
+	}
 
 	if(this->mCurrentFrameOnPhase > mReferenceManager->GetPhaseLength()){
 		this->mCurrentFrameOnPhase -= mReferenceManager->GetPhaseLength();
@@ -385,8 +385,8 @@ GetTrackingReward(Eigen::VectorXd position, Eigen::VectorXd position2,
 
 	double sig_p = 0.3 * scale; 
 	double sig_v = 3.0 * scale;	
-	double sig_com = 0.2 * scale;		
-	double sig_ee = 0.2 * scale;		
+	double sig_com = 0.8 * scale;		
+	double sig_ee = 0.8 * scale;		
 
 	double r_p = exp_of_squared(p_diff_reward,sig_p);
 	double r_v;
@@ -692,7 +692,7 @@ Reset(bool RSI)
 	// right_detached= (mCurrentFrame >=51) ? true: false;
 
 	// min_hand = 10000;
-	// SetRandomForce();
+	SetRandomForce();
 
 	
 
@@ -740,29 +740,29 @@ void
 Controller::
 SetRandomForce(){
 	int UnitFrame = this->mReferenceManager->GetPhaseLength();
-	this->mHitFrame = UnitFrame*2;
+	this->mHitFrame = 125;
 
-	if(std::rand()%3==0){
+	if(std::rand()%2==0){
 		this->isHit = true;
 	}
-	this->ext_force = std::rand()%(300);
+	this->ext_force = std::rand()%70+30;
+	this->ext_dir = Eigen::Vector3d::UnitX();
+	// int dir_idx = std::rand()%(2);
+	// switch(dir_idx){
+	// 	case 0:
+	// 		this->ext_dir = Eigen::Vector3d::UnitX();
+	// 		break;
+	// 	case 1:
+	// 		this->ext_dir = -Eigen::Vector3d::UnitX();
+	// 		break;
 
-	int dir_idx = std::rand()%(2);
-	switch(dir_idx){
-		case 0:
-			this->ext_dir = Eigen::Vector3d::UnitZ();
-			break;
-		case 1:
-			this->ext_dir = -Eigen::Vector3d::UnitZ();
-			break;
-
-	}
+	// }
 
 	if(mtest){
 		
 		this->isHit = true;
-		this->ext_force = 250;
-		this->ext_dir = Eigen::Vector3d::UnitZ();
+		this->ext_force =30;
+		this->ext_dir = Eigen::Vector3d::UnitX();
 
 	}
 	
