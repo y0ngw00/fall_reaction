@@ -189,25 +189,21 @@ Step()
 		mTimeElapsed += 1;
 	}
 
-	if(isHit && this->mCurrentFrame>(this->mHitFrame-1)&& this->mCurrentFrame<(this->mHitFrame+1)){
+	if(isHit && this->mCurrentFrame>(this->mHitFrame - 15)&& this->mCurrentFrame<(this->mHitFrame + 15)){
 		// random element : force direction / hitting parts 
 		//int numNode = mCharacter->GetSkeleton()->getNumBodyNodes();
 		Eigen::Vector3d ext_pos(0,0,0);
-		Eigen::Vector3d mForce = this->ext_force* this->ext_dir;
+		double cur_force = ext_force * (1 - std::abs(mCurrentFrame - this->mHitFrame)/15);
+		Eigen::Vector3d mForce = cur_force* this->ext_dir;
 
 		int target = std::rand() % mTargetBody.size();
 
-		if(this->mtest){
-			mCharacter->GetSkeleton()->getBodyNode("Spine2")->addExtForce(mForce, ext_pos);
-		}
+		mCharacter->GetSkeleton()->getBodyNode("Spine2")->clearExternalForces();
+		mCharacter->GetSkeleton()->getBodyNode("Spine2")->setExtForce(mForce, ext_pos);
 
-		else{
-			mCharacter->GetSkeleton()->getBodyNode(mTargetBody[target])->addExtForce(mForce, ext_pos);
-		}
-		
-		mWorld->step(false);
-
-		this->isHit = false;
+	}
+	else{
+		mCharacter->GetSkeleton()->getBodyNode("Spine2")->clearExternalForces();
 	}
 
 	if(this->mCurrentFrameOnPhase > mReferenceManager->GetPhaseLength()){
@@ -300,7 +296,7 @@ UpdateTerminalInfo()
 	}
 
 	double cur_height_limit = TERMINAL_ROOT_HEIGHT_UPPER_LIMIT;
-	if(!mRecord && root_y<TERMINAL_ROOT_HEIGHT_LOWER_LIMIT || root_y > cur_height_limit){
+	if(!mRecord &&root_y<TERMINAL_ROOT_HEIGHT_LOWER_LIMIT || root_y > cur_height_limit){
 		mIsTerminal = true;
 		terminationReason = 1;
 	}
@@ -385,8 +381,8 @@ GetTrackingReward(Eigen::VectorXd position, Eigen::VectorXd position2,
 
 	double sig_p = 0.3 * scale; 
 	double sig_v = 3.0 * scale;	
-	double sig_com = 0.8 * scale;		
-	double sig_ee = 0.8 * scale;		
+	double sig_com = 0.2 * scale;		
+	double sig_ee = 0.2 * scale;		
 
 	double r_p = exp_of_squared(p_diff_reward,sig_p);
 	double r_v;
@@ -410,6 +406,73 @@ GetTrackingReward(Eigen::VectorXd position, Eigen::VectorXd position2,
 	return rewards;
 }
 
+std::vector<double> 
+Controller::
+GetRecoveryReward(Eigen::VectorXd position,Eigen::VectorXd position2)
+{
+	dart::dynamics::SkeletonPtr skel = this->mCharacter->GetSkeleton();
+	int dof = skel->getNumDofs();
+	int num_body_nodes = skel->getNumBodyNodes();
+
+	Eigen::VectorXd p_save = skel->getPositions();
+	Eigen::VectorXd v_save = skel->getVelocities();
+	std::vector<double> rewards;
+	rewards.clear();
+
+	Eigen::Vector3d Y = Eigen::Vector3d::UnitY();
+
+	
+	
+	
+	//2. Root orientation
+	Eigen::VectorXd com_dir_reward(3);
+	for(int i=0; i<3;i++){
+		com_dir_reward[i] = position[3+i] - Y[i];
+	}
+
+	//3. EE height
+	Eigen::VectorXd ee_height_reward(2);
+	for(int i=0;i<2;i++){
+		Eigen::Isometry3d ee_diff = skel->getBodyNode(mEndEffectors[i])->getWorldTransform();
+		ee_height_reward[i] = ee_diff.translation()[1];
+	}
+	
+
+
+	//1. Root height
+	Eigen::Vector3d COM_1 = skel->getCOM();
+	skel->setPositions(position2);
+	Eigen::Vector3d COM_2 = skel->getCOM();
+
+
+	Eigen::Vector3d com_diff_reward = COM_1 - COM_2;
+	com_diff_reward[0]=0;
+	com_diff_reward[2]=0;
+
+
+	double scale = 1.0;
+
+	double sig_com = 0.3 * scale; 
+	double sig_dir = 0.2 * scale;	
+	double sig_ee = 0.2 * scale;		
+
+	double r_com = exp_of_squared(com_diff_reward,sig_com);
+	double r_dir = exp_of_squared(com_dir_reward,sig_dir);
+	double r_ee = exp_of_squared(ee_height_reward,sig_dir);
+
+	rewards.push_back(r_com);
+	rewards.push_back(r_dir);
+	rewards.push_back(r_ee);
+
+	
+	skel->setPositions(p_save);
+	skel->setVelocities(v_save);
+	//skel->computeForwardKinematics(true,true,false);
+	return rewards;
+}
+
+
+
 void
 Controller::
 UpdateReward()
@@ -421,7 +484,17 @@ UpdateReward()
 
 
 	mRewardParts.clear();
-	double r_tot = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3])  + 0.05 * tracking_rewards_bvh[4];
+	double r_tot;
+	if(this->isHit && this->mCurrentFrame>(this->mHitFrame - 15)&& this->mCurrentFrame<(this->mHitFrame + 30)){
+		double r_track = tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3];
+		std::vector<double> recovery_rewards = this->GetRecoveryReward(skel->getPositions(), mTargetPositions);
+		double r_recov = recovery_rewards[0] * recovery_rewards[1] * recovery_rewards[2];
+		r_tot = 0.7* r_track + 0.3*r_recov;
+	}
+	else {
+	r_tot = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3])  + 0.05 * tracking_rewards_bvh[4];
+	}
+
 	if(dart::math::isNan(r_tot)){
 		mRewardParts.resize(mRewardLabels.size(), 0.0);
 	}
@@ -761,7 +834,7 @@ SetRandomForce(){
 	if(mtest){
 		
 		this->isHit = true;
-		this->ext_force =30;
+		this->ext_force =100;
 		this->ext_dir = Eigen::Vector3d::UnitX();
 
 	}

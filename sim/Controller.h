@@ -33,6 +33,7 @@ public:
 
 	std::vector<double> GetTrackingReward(Eigen::VectorXd position, Eigen::VectorXd position2, 
 						Eigen::VectorXd velocity, Eigen::VectorXd velocity2, bool useVelocity);
+	std::vector<double> GetRecoveryReward(Eigen::VectorXd position,Eigen::VectorXd position2);
 	double GetParamReward();
 	void UpdateReward();
 	double GetReward() {return mRewardParts[0]; }

@@ -1,7 +1,6 @@
 
 #include "GLUTWindow.h"
 #include <iostream>
-#include <GL/glut.h>
 
 std::vector<GLUTWindow*> GLUTWindow::mWindows;
 std::vector<int> GLUTWindow::mWinIDs;
@@ -25,7 +24,7 @@ GLInitWindow(const char* _name)
 	mWindows.push_back(this);
 	glutInitDisplayMode(GLUT_DEPTH |GLUT_DOUBLE | GLUT_RGBA | GLUT_STENCIL);
 	//glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_MULTISAMPLE | GLUT_ACCUM);
-	glutInitWindowSize(640, 640);
+	glutInitWindowSize(1920, 1080);
 	glutInitWindowPosition(0, 0);
 	mWinIDs.push_back(glutCreateWindow("Forward and Inverse Kinematics"));
 	glutDisplayFunc(DisplayEvent);
@@ -37,6 +36,12 @@ GLInitWindow(const char* _name)
 	
 	glutTimerFunc(mDisplayTimeout, TimerEvent, 0);
 
+	glewExperimental=true; // Needed in core profile
+	if (glewInit() != GLEW_OK) {
+	    fprintf(stderr, "Failed to initialize GLEW\n");
+	    exit(EXIT_FAILURE);
+	}
+	glRecordInitialize();
 	GLinitEnvironment();
 }
 
@@ -104,7 +109,11 @@ glRecordInitialize()
     ogrRegReadPixelsFunction(glReadPixels);
     ogrRegPBOFunctions(glGenBuffers, glBindBuffer, glBufferData,glDeleteBuffers, glMapBuffer, glUnmapBuffer);
 
-    ogrSetSavedName("Render");
+    std::string path = std::string(PROJECT_DIR)+ std::string("/Render");
+    char *char_path = new char[path.length() + 1];
+    strcpy(char_path, path.c_str());
+    ogrSetSavedName(char_path);
+    delete [] char_path;
 }
 
 

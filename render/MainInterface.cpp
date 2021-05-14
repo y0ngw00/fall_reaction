@@ -72,6 +72,10 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 		
 	}
 
+	
+
+
+
 
 }
 
@@ -89,11 +93,11 @@ display()
 	DrawGround();
 
 	DrawSkeletons();
-	if(this->mCurFrame > (this->forceframe - 10) && this->mCurFrame < (this->forceframe + 30)){
+	if(this->mCurFrame > (this->forceframe - 15) && this->mCurFrame < (this->forceframe + 30)){
 		DrawForce();
 	}
 
-	
+
 	glutSwapBuffers();
 
 	
