@@ -485,11 +485,12 @@ UpdateReward()
 
 	mRewardParts.clear();
 	double r_tot;
-	if(this->isHit && this->mCurrentFrame>(this->mHitFrame - 15)&& this->mCurrentFrame<(this->mHitFrame + 30)){
-		double r_track = tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3];
-		std::vector<double> recovery_rewards = this->GetRecoveryReward(skel->getPositions(), mTargetPositions);
-		double r_recov = recovery_rewards[0] * recovery_rewards[1] * recovery_rewards[2];
-		r_tot = 0.7* r_track + 0.3*r_recov;
+	if(this->isHit && this->mCurrentFrame>(this->mHitFrame - 15)){
+		double r_track = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[3])+ 0.05 * tracking_rewards_bvh[4];
+		// std::vector<double> recovery_rewards = this->GetRecoveryReward(skel->getPositions(), mTargetPositions);
+		// double r_recov = recovery_rewards[0] * recovery_rewards[1] * recovery_rewards[2];
+		r_tot = r_track;
+
 	}
 	else {
 	r_tot = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3])  + 0.05 * tracking_rewards_bvh[4];
@@ -834,7 +835,7 @@ SetRandomForce(){
 	if(mtest){
 		
 		this->isHit = true;
-		this->ext_force =100;
+		this->ext_force =80;
 		this->ext_dir = Eigen::Vector3d::UnitX();
 
 	}
