@@ -15,7 +15,7 @@ add_compile_options(-lm)
 
 add_definitions(-DPROJECT_DIR="${CMAKE_HOME_DIRECTORY}")
 
-
+set(CMAKE_PREFIX_PATH "/home/yongwoo/dart-ltspd")
 set(CMAKE_MODULE_PATH "${CMAKE_HOME_DIRECTORY}/cmake_module")
 find_package(DART REQUIRED COMPONENTS gui optimizer-ipopt collision-bullet collision-ode CONFIG)
 find_package(PythonLibs 3.6 REQUIRED)

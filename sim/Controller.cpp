@@ -118,6 +118,7 @@ initPhysicsEnv()
 	dynamic_cast<dart::constraint::BoxedLcpConstraintSolver*>(mWorld->getConstraintSolver())->setBoxedLcpSolver(std::make_shared<dart::constraint::PgsBoxedLcpSolver>());
 	this->mGround = DPhy::SkeletonBuilder::BuildFromFile(std::string(PROJECT_DIR)+std::string("/character/ground.xml")).first;
 	this->mGround->getBodyNode(0)->setFrictionCoeff(1.0);
+	//this->mGround->getBodyNode(1)->setFrictionCoeff(1.0);
 	this->mWorld->addSkeleton(this->mGround);
 
 }
@@ -185,6 +186,7 @@ Step()
 		
 		// torque limit
 		Eigen::VectorXd torque = mCharacter->GetSkeleton()->getSPDForces(mPDTargetPositions, 600, 49, mWorld->getConstraintSolver());
+		
 		for(int j = 0; j < num_body_nodes; j++) {
 			int idx = mCharacter->GetSkeleton()->getBodyNode(j)->getParentJoint()->getIndexInSkeleton(0);
 			int dof = mCharacter->GetSkeleton()->getBodyNode(j)->getParentJoint()->getNumDofs();
@@ -771,8 +773,8 @@ CreateSlip(dart::dynamics::SkeletonPtr ground){
 
 
 	Eigen::Vector3d pos = Eigen::Vector3d(0.0,0.025,1.5);
-	Eigen::Vector3d size = Eigen::Vector3d(0.3,0.02,0.3);
-	double friction_coeff = 0.1;
+	Eigen::Vector3d size = Eigen::Vector3d(0.5,0.02,0.5);
+	double friction_coeff = 0.5;
 	double mass = 1000;
 	dart::dynamics::BodyNode* bn = ground->createJointAndBodyNodePair<dart::dynamics::FreeJoint>(nullptr).second;
 	dart::dynamics::ShapePtr shape = std::shared_ptr<dart::dynamics::BoxShape>(new dart::dynamics::BoxShape(size));

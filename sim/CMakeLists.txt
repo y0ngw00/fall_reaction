@@ -25,4 +25,4 @@ file(GLOB SOURCES "*.h" "*.cpp")
 #list(FILTER SOURCES EXCLUDE REGEX "swing_cleanup.cpp")
 
 add_library(sim ${SOURCES} )
-target_link_libraries(sim ${DART_LIBRARIES} pybind11::embed ${Pybind11_LIBRARIES} ${TinyXML_LIBRARIES} ${PYTHON_LIBRARIES})
+target_link_libraries(sim ${DART_LIBRARIES} ${Pybind11_LIBRARIES} ${TinyXML_LIBRARIES} ${PYTHON_LIBRARIES})
