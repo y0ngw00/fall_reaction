@@ -835,7 +835,7 @@ SetRandomForce(){
 	if(mtest){
 		
 		this->isHit = true;
-		this->ext_force =80;
+		this->ext_force =120;
 		this->ext_dir = Eigen::Vector3d::UnitX();
 
 	}
