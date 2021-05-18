@@ -33,9 +33,6 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
     mReferenceManager = new DPhy::ReferenceManager(ref);
     mReferenceManager->LoadMotionFromBVH(std::string("/motion/") + bvh);
 
-
-	this-> mBoard = dart::dynamics::Skeleton::create("Slip");
-
     std::vector<Eigen::VectorXd> pos;
 	
 	phase = 0;
@@ -135,8 +132,7 @@ DrawSkeletons()
 	if(render_sim){
 		GUI::DrawSkeleton(this->mSkel_sim, 0);
 	}
-	if(render_obj)
-		GUI::DrawSkeleton(this->mBoard,Eigen::Vector3d(255./255., 255./255.,	255./255.),0);
+	
 	glPopMatrix();
 }	
 
@@ -154,7 +150,7 @@ DrawGround()
 	ox = -(num_x * size) / 2;
 	for (int x = 0; x < num_x; x++, ox += size)
 	{
-		oz = -(num_z * size) / 2;
+		oz = -(num_z * size);
 		for (int z = 0; z < num_z; z++, oz += size)
 		{
 			if (((x + z) % 2) == 0)
@@ -165,6 +161,19 @@ DrawGround()
 			glVertex3d(ox, 0.0, oz + size);
 			glVertex3d(ox + size, 0.0, oz + size);
 			glVertex3d(ox + size, 0.0, oz);
+		}
+
+		oz = -(num_z * size) / 2;
+		for (int z = 0; z < num_z; z++, oz += size)
+		{
+			if (((x + z) % 2) == 0)
+				glColor3f(1.0, 1.0, 1.0);
+			else
+				glColor3f(0.7, 0.7, 0.7);
+			glVertex3d(ox, -1.0, oz);
+			glVertex3d(ox, -1.0, oz + size);
+			glVertex3d(ox + size, -1.0, oz + size);
+			glVertex3d(ox + size, -1.0, oz);
 		}
 	}
 	glEnd();
@@ -202,9 +211,6 @@ initNetworkSetting(std::string ppo) {
 			this->mPPO.attr("initRun")(path,
 									   this->mController->GetNumState(), 
 									   this->mController->GetNumAction());
-
-			this->mController->CreateSlip(this->mBoard);
-
 			RunPPO();
     	}
     
@@ -249,11 +255,9 @@ RunPPO() {
 		Eigen::VectorXd position_bvh = this->mController->GetBVHPositions(i);
 		position_bvh[3]-=1.5;
 
-		Eigen::VectorXd position_obj = this->mController->GetObjPositions(i);
 
 		pos_sim.push_back(position);
 		pos_bvh.push_back(position_bvh);
-		pos_obj.push_back(position_obj);
 		
 	}
 	// Eigen::VectorXd root_bvh = mReferenceManager->GetPosition(0, false);
@@ -261,7 +265,6 @@ RunPPO() {
 	// pos_reg =  DPhy::Align(pos_reg, root_bvh);
 	UpdateMotion(pos_bvh, "bvh");
 	UpdateMotion(pos_sim, "sim");
-	UpdateMotion(pos_obj, "obj");
 
 
 }
