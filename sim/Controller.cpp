@@ -5,7 +5,7 @@ namespace DPhy
 {
 
 Controller::Controller(ReferenceManager* ref, std::string character_path, bool record, int id, bool test)
-	:mControlHz(30),mSimulationHz(150),mCurrentFrame(0),
+	:mControlHz(30),mSimulationHz(600),mCurrentFrame(0),
 	w_p(0.35),w_v(0.1),w_ee(0.3),w_com(0.25),
 	terminationReason(-1),mIsNanAtTerminal(false), mIsTerminal(false)
 {
@@ -96,6 +96,23 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	mTargetBody.push_back("RightShoulder");
 	mTargetBody.push_back("Hips");
 	mTargetBody.push_back("Spine");
+
+
+	mFallGuard.clear();
+	mFallGuard.push_back("LeftToe");
+	mFallGuard.push_back("RightToe");
+	mFallGuard.push_back("LeftForeArm");
+	mFallGuard.push_back("RightForeArm");
+	mFallGuard.push_back("RightHand");
+	mFallGuard.push_back("LeftHand");
+
+	mFallProtect.clear();
+	mFallProtect.push_back("Hips");
+	mFallProtect.push_back("Spine");
+	mFallProtect.push_back("Spine1");
+	mFallProtect.push_back("Spine2");
+	mFallProtect.push_back("Neck");
+	mFallProtect.push_back("Head");
 	
 
 }
@@ -112,7 +129,6 @@ initPhysicsEnv()
 	this->mGround = DPhy::SkeletonBuilder::BuildFromFile(std::string(PROJECT_DIR)+std::string("/character/ground.xml")).first;
 	this->mGround->getBodyNode(0)->setFrictionCoeff(1.0);
 	this->mWorld->addSkeleton(this->mGround);
-
 }
 void 
 Controller::
@@ -290,13 +306,13 @@ UpdateTerminalInfo()
 		terminationReason = 4;
 	}
 
-	if(!mRecord && root_pos_diff.norm() > TERMINAL_ROOT_DIFF_THRESHOLD){
+	if(!isHit && !mRecord && root_pos_diff.norm() > TERMINAL_ROOT_DIFF_THRESHOLD){
 		mIsTerminal = true;
 		terminationReason = 2;
 	}
 
 	double cur_height_limit = TERMINAL_ROOT_HEIGHT_UPPER_LIMIT;
-	if(!mRecord &&root_y<TERMINAL_ROOT_HEIGHT_LOWER_LIMIT || root_y > cur_height_limit){
+	if(root_y<TERMINAL_ROOT_HEIGHT_LOWER_LIMIT || root_y > cur_height_limit){
 		mIsTerminal = true;
 		terminationReason = 1;
 	}
@@ -304,7 +320,7 @@ UpdateTerminalInfo()
 		mIsTerminal = true;
 		terminationReason = 5;
 	}
-	else if(mCurrentFrame > mReferenceManager->GetPhaseLength()*6) { // this->mBVH->GetMaxFrame() - 1.0){
+	else if(mCurrentFrame > mReferenceManager->GetPhaseLength()*3) { // this->mBVH->GetMaxFrame() - 1.0){
 		mIsTerminal = true;
 		terminationReason =  8;
 	}
@@ -472,6 +488,76 @@ GetRecoveryReward(Eigen::VectorXd position,Eigen::VectorXd position2)
 }
 
 
+std::vector<double> 
+Controller::
+GetBreakfallReward(Eigen::VectorXd position)
+{
+	dart::dynamics::SkeletonPtr skel = this->mCharacter->GetSkeleton();
+	int dof = skel->getNumDofs();
+	int num_body_nodes = skel->getNumBodyNodes();
+
+	std::vector<double> rewards;
+	rewards.clear();
+
+
+	Eigen::Vector3d ground_pos = this->mGround->getBodyNode(0)->getWorldTransform().translation();
+
+	
+
+	Eigen::VectorXd ee_diff_reward(this->mFallGuard.size());
+	for(int i=0;i<mFallGuard.size();i++){
+		Eigen::Vector3d ee_pos =this->mCharacter->GetSkeleton()->getBodyNode(mFallGuard[i])->getWorldTransform().translation();
+
+		double diff = ee_pos[1]-ground_pos[1];
+
+		ee_diff_reward[i] = diff;
+
+	}
+	Eigen::VectorXd protect_reward(this->mFallProtect.size()-2);
+	Eigen::VectorXd height_reward(this->mFallProtect.size());
+	for(int i=0;i<mFallProtect.size()-2;i++){
+		Eigen::Vector3d protect_pos1 =mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i])->getWorldTransform().translation();
+		Eigen::Vector3d protect_pos2 =mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i+1])->getWorldTransform().translation();
+		Eigen::Vector3d protect_pos3 =mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i+2])->getWorldTransform().translation();
+
+		if(protect_pos1[1] <= ground_pos[1] ||protect_pos2[1] <= ground_pos[1] || protect_pos3[1] <= ground_pos[1]){
+			protect_reward[i] = 10;
+			continue;
+		}
+
+		Eigen::Vector3d v1 = (protect_pos1 - protect_pos2).normalized();
+		Eigen::Vector3d v2 = (protect_pos2 - protect_pos3).normalized();
+		double diff = std::abs(v1.dot(v2))-1;
+		protect_reward[i] = diff;
+	}
+	for(int i=0;i<mFallProtect.size();i++){
+		Eigen::Vector3d pos =mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i])->getWorldTransform().translation();
+		double diff = std::min(pos[1], 0.4);
+		height_reward[i] = 0.4 - diff;
+	}
+
+	double scale = 1.0;
+
+	
+	double sig_pp = 0.2 * scale;		
+	double sig_ee = 0.3 * scale;
+	double sig_h = 0.05 * scale;		
+
+
+	double r_ee = exp_of_squared(ee_diff_reward,sig_ee);
+	double r_pp = exp_of_squared(protect_reward,sig_pp);
+	double r_h = exp_of_squared(height_reward,sig_h);
+
+	rewards.push_back(r_pp);
+	rewards.push_back(r_ee);
+	rewards.push_back(r_h);
+
+	//skel->computeForwardKinematics(true,true,false);
+	return rewards;
+}
+
+
+
 
 void
 Controller::
@@ -486,27 +572,37 @@ UpdateReward()
 	mRewardParts.clear();
 	double r_tot;
 	if(this->isHit && this->mCurrentFrame>(this->mHitFrame - 15)){
-		double r_track = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[3])+ 0.05 * tracking_rewards_bvh[4];
-		// std::vector<double> recovery_rewards = this->GetRecoveryReward(skel->getPositions(), mTargetPositions);
-		// double r_recov = recovery_rewards[0] * recovery_rewards[1] * recovery_rewards[2];
-		r_tot = r_track;
-
+		std::vector<double> protect_rewards = this->GetBreakfallReward(skel->getPositions());
+		r_tot = protect_rewards[0] * protect_rewards[1] * protect_rewards[2];
+		//r_tot = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3])  + 0.05 * tracking_rewards_bvh[4];
+		if(dart::math::isNan(r_tot)){
+			mRewardParts.resize(mRewardLabels.size(), 0.0);
+		}
+		else {
+				mRewardParts.push_back(r_tot);
+				mRewardParts.push_back(protect_rewards[0]);
+				mRewardParts.push_back(protect_rewards[1]);
+				mRewardParts.push_back(protect_rewards[2]);
+				mRewardParts.push_back(1);
+				mRewardParts.push_back(1);
+		}	
 	}
 	else {
-	r_tot = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3])  + 0.05 * tracking_rewards_bvh[4];
+		r_tot = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3])  + 0.05 * tracking_rewards_bvh[4];
+	
+		if(dart::math::isNan(r_tot)){
+			mRewardParts.resize(mRewardLabels.size(), 0.0);
+		}
+		else {
+				mRewardParts.push_back(r_tot);
+				mRewardParts.push_back(tracking_rewards_bvh[0]);
+				mRewardParts.push_back(tracking_rewards_bvh[1]);
+				mRewardParts.push_back(tracking_rewards_bvh[2]);
+				mRewardParts.push_back(tracking_rewards_bvh[3]);
+				mRewardParts.push_back(tracking_rewards_bvh[4]);
+		}	
 	}
-
-	if(dart::math::isNan(r_tot)){
-		mRewardParts.resize(mRewardLabels.size(), 0.0);
-	}
-	else {
-		mRewardParts.push_back(r_tot);
-		mRewardParts.push_back(tracking_rewards_bvh[0]);
-		mRewardParts.push_back(tracking_rewards_bvh[1]);
-		mRewardParts.push_back(tracking_rewards_bvh[2]);
-		mRewardParts.push_back(tracking_rewards_bvh[3]);
-		mRewardParts.push_back(tracking_rewards_bvh[4]);
-	}
+	
 }
 Eigen::VectorXd 
 Controller::
@@ -766,6 +862,7 @@ Reset(bool RSI)
 	// right_detached= (mCurrentFrame >=51) ? true: false;
 
 	// min_hand = 10000;
+	this->isHit = false;
 	SetRandomForce();
 
 	
@@ -819,8 +916,8 @@ SetRandomForce(){
 	if(std::rand()%2==0){
 		this->isHit = true;
 	}
-	this->ext_force = std::rand()%70+30;
-	this->ext_dir = Eigen::Vector3d::UnitX();
+	this->ext_force = std::rand()%70+50;
+	this->ext_dir = Eigen::Vector3d::UnitZ();
 	// int dir_idx = std::rand()%(2);
 	// switch(dir_idx){
 	// 	case 0:
@@ -836,7 +933,7 @@ SetRandomForce(){
 		
 		this->isHit = true;
 		this->ext_force =120;
-		this->ext_dir = Eigen::Vector3d::UnitX();
+		this->ext_dir = Eigen::Vector3d::UnitZ();
 
 	}
 	

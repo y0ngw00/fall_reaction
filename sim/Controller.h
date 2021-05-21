@@ -34,6 +34,7 @@ public:
 	std::vector<double> GetTrackingReward(Eigen::VectorXd position, Eigen::VectorXd position2, 
 						Eigen::VectorXd velocity, Eigen::VectorXd velocity2, bool useVelocity);
 	std::vector<double> GetRecoveryReward(Eigen::VectorXd position,Eigen::VectorXd position2);
+	std::vector<double> GetBreakfallReward(Eigen::VectorXd position);
 	double GetParamReward();
 	void UpdateReward();
 	double GetReward() {return mRewardParts[0]; }
@@ -162,6 +163,10 @@ protected:
 	int ext_force;
 	Eigen::Vector3d ext_dir;
 	std::vector<std::string> mTargetBody;
+
+	std::vector<std::string> mFallGuard;
+	std::vector<std::string> mFallProtect;
+
 
 };
 }

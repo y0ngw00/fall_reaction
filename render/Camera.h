@@ -12,6 +12,7 @@ public:
 	void viewupdate();
 	void Translate(int mx, int my, int prev_x, int prev_y);
 	void SetLookAt(Eigen::Vector3d& new_lookAt);
+	void SetEye(Eigen::Vector3d& new_eye);
 	void Zoom(int degree);
 
 

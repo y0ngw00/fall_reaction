@@ -88,6 +88,10 @@ display()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	if(isTrack && on_animation){
+		mCamera->Translate(1.5,0,0,0);
+	}
+
 	mCamera->viewupdate();
 	DrawStatus();
 	DrawGround();
@@ -390,9 +394,19 @@ keyboard(unsigned char key, int mx, int my)
 		this->render_bvh = (this->render_bvh == false);
 	if (key == '2')
 		this->render_sim = (this->render_sim == false);
+	if (key == '5'){
+		Eigen::Vector3d new_eye={10,0,0};
+		mCamera->SetEye(new_eye);
+		this->isTrack=true;
+	}
 	if (key == 'r'){
 		Reset();
 		on_animation = false;
+		Eigen::Vector3d new_lookAt={0,0.8,0};
+		Eigen::Vector3d new_eye={10,0,0};
+		mCamera->SetLookAt(new_lookAt);
+		mCamera->SetEye(new_eye);
+		this->isTrack=false;
 	}
 	// // change animation mode
 	if (key == 'v') {

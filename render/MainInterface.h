@@ -103,6 +103,7 @@ protected:
 
 	
 	bool isRecord=false;
+	bool isTrack=false;
 
 	
 };

@@ -73,6 +73,16 @@ SetLookAt(Eigen::Vector3d& new_lookAt)
 	eye[2] += 2;
 }
 
+void
+Camera::
+SetEye(Eigen::Vector3d& new_eye)
+{
+	
+	this->eye = this->lookAt + new_eye;
+	glutPostRedisplay();
+}
+
+
 void Camera::Zoom(int degree){
 
 	double delta = degree * 0.1;
