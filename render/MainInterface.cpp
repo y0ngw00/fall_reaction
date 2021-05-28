@@ -429,12 +429,19 @@ keyboard(unsigned char key, int mx, int my)
 	// 	Reset();
 	// }	
 	// // change animation mode
-	// if (key == 'a') {
-	// 	animation_flag = (animation_flag + 1) % 5;
-	// }
-	// if (key == 'A') {
-	// 	animation_flag = (animation_flag + 4) % 5;
-	// }
+	if (key == 'q') {
+    	on_animation = false;
+
+		this->mCurFrame--;
+	}
+	if (key == 'p') {
+
+    	on_animation = false;
+    	if(mCurFrame<mTotalFrame)
+			this->mCurFrame++;
+		else
+			mCurFrame = mTotalFrame-1;
+	}
 
 	// // change animation scale
 	// if (key == '_' || key == '-') {

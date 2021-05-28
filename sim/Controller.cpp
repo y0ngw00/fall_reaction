@@ -50,6 +50,13 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	this->mCGER = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("RightToe"));
 	this->mCGHL = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("LeftHand"));
 	this->mCGHR = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("RightHand"));
+	
+	this->mCGH = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("Head"));
+	this->mCGAR = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("RightForeArm"));
+	this->mCGAL = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("LeftForeArm"));
+	this->mCR = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("RightLeg"));
+	this->mCL = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("LeftLeg"));
+
 	this->mCGG = collisionEngine->createCollisionGroup(this->mGround.get());
 	int num_body_nodes = mInterestedDof / 3;
 	int dof = this->mCharacter->GetSkeleton()->getNumDofs(); 
@@ -101,18 +108,18 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	mFallGuard.clear();
 	mFallGuard.push_back("LeftToe");
 	mFallGuard.push_back("RightToe");
-	mFallGuard.push_back("LeftForeArm");
-	mFallGuard.push_back("RightForeArm");
-	mFallGuard.push_back("RightHand");
+	// mFallGuard.push_back("LeftLeg");
+	// mFallGuard.push_back("RightLeg");
 	mFallGuard.push_back("LeftHand");
+	mFallGuard.push_back("RightHand");
 
 	mFallProtect.clear();
 	mFallProtect.push_back("Hips");
 	mFallProtect.push_back("Spine");
 	mFallProtect.push_back("Spine1");
 	mFallProtect.push_back("Spine2");
-	mFallProtect.push_back("Neck");
-	mFallProtect.push_back("Head");
+	// mFallProtect.push_back("Neck");
+	// mFallProtect.push_back("Head");
 	
 
 }
@@ -161,12 +168,26 @@ Step()
 	int n_bnodes = mCharacter->GetSkeleton()->getNumBodyNodes();
 
 	Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	// After hit, the target position would be fixed.
+	if(this->isHit && this->mCurrentFrame>(this->mHitFrame)){
+		p_v_target = mReferenceManager->GetMotion(this->mHitFrame);
+	}
+	else{
+		p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	}
+
 	Eigen::VectorXd p_now = p_v_target->GetPosition();
 	this->mTargetPositions = p_now ; //p_v_target->GetPosition();
 	this->mTargetVelocities = mCharacter->GetSkeleton()->getPositionDifferences(mTargetPositions, mPrevTargetPositions) / 0.033;
 	delete p_v_target;
 
-	p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	if(this->isHit && this->mCurrentFrame>(this->mHitFrame)){
+		p_v_target = mReferenceManager->GetMotion(this->mHitFrame);
+	}
+	else{
+		p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	}
+
 	this->mPDTargetPositions = p_v_target->GetPosition();
 	this->mPDTargetVelocities = p_v_target->GetVelocity();
 	delete p_v_target;
@@ -501,56 +522,78 @@ GetBreakfallReward(Eigen::VectorXd position)
 
 
 	Eigen::Vector3d ground_pos = this->mGround->getBodyNode(0)->getWorldTransform().translation();
+	Eigen::Vector3d COM = skel->getCOM();
+	Eigen::Vector3d COP = Eigen::Vector3d::Zero();
 
-	
+	Eigen::VectorXd protect_reward((this->mFallProtect.size()-1)*3);
+	protect_reward.setZero();
+	//Eigen::VectorXd height_reward(this->mFallProtect.size());
+	for(int i=0;i<mFallProtect.size()-1;i++){
+		Eigen::Isometry3d body1 = mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i])->getWorldTransform();
+		Eigen::Isometry3d body2 = mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i+1])->getWorldTransform();
+		Eigen::Quaterniond protect1_inv =Eigen::Quaterniond(body1.inverse().linear());
+		Eigen::Quaterniond protect2 =Eigen::Quaterniond(body2.linear());
 
-	Eigen::VectorXd ee_diff_reward(this->mFallGuard.size());
+		Eigen::Vector3d angle_diff = QuaternionToDARTPosition(protect1_inv * protect2);
+		protect_reward.segment<3>(3*i) = angle_diff;
+	}
+	// for(int i=0;i<mFallProtect.size();i++){
+	// 	Eigen::Vector3d pos =mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i])->getWorldTransform().translation();
+	// 	double diff = std::min(pos[1], 0.3);
+	// 	height_reward[i] = 0.3 - diff;
+	// }
+
+
+
+
+	Eigen::VectorXd ee_contact_reward(this->mFallGuard.size());
 	for(int i=0;i<mFallGuard.size();i++){
+		bool isContact = CheckCollisionWithGround(mFallGuard[i]);
 		Eigen::Vector3d ee_pos =this->mCharacter->GetSkeleton()->getBodyNode(mFallGuard[i])->getWorldTransform().translation();
 
-		double diff = ee_pos[1]-ground_pos[1];
 
-		ee_diff_reward[i] = diff;
+		int w_contact =  isContact? 0.0 : 3.0;
+		double diff = std::max(ee_pos[1]-0.07,0.0);
 
+		ee_contact_reward[i] = w_contact * diff;
+
+		COP+=ee_pos;
 	}
-	Eigen::VectorXd protect_reward(this->mFallProtect.size()-2);
-	Eigen::VectorXd height_reward(this->mFallProtect.size());
-	for(int i=0;i<mFallProtect.size()-2;i++){
-		Eigen::Vector3d protect_pos1 =mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i])->getWorldTransform().translation();
-		Eigen::Vector3d protect_pos2 =mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i+1])->getWorldTransform().translation();
-		Eigen::Vector3d protect_pos3 =mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i+2])->getWorldTransform().translation();
+	COP/=mFallGuard.size();
 
-		if(protect_pos1[1] <= ground_pos[1] ||protect_pos2[1] <= ground_pos[1] || protect_pos3[1] <= ground_pos[1]){
-			protect_reward[i] = 10;
-			continue;
-		}
+	Eigen::Vector3d com_cop_reward = COM - COP;
 
-		Eigen::Vector3d v1 = (protect_pos1 - protect_pos2).normalized();
-		Eigen::Vector3d v2 = (protect_pos2 - protect_pos3).normalized();
-		double diff = std::abs(v1.dot(v2))-1;
-		protect_reward[i] = diff;
-	}
-	for(int i=0;i<mFallProtect.size();i++){
-		Eigen::Vector3d pos =mCharacter->GetSkeleton()->getBodyNode(mFallProtect[i])->getWorldTransform().translation();
-		double diff = std::min(pos[1], 0.4);
-		height_reward[i] = 0.4 - diff;
-	}
+
+	bool headContact = CheckCollisionWithGround("Head");
+	
 
 	double scale = 1.0;
 
 	
-	double sig_pp = 0.2 * scale;		
-	double sig_ee = 0.3 * scale;
-	double sig_h = 0.05 * scale;		
+	double sig_pp = 0.3 * scale;		
+	// double sig_h = 0.2 * scale;		
+	//double sig_ee = 0.2 * scale;
+	double sig_com = 0.4 * scale;	
 
-
-	double r_ee = exp_of_squared(ee_diff_reward,sig_ee);
 	double r_pp = exp_of_squared(protect_reward,sig_pp);
-	double r_h = exp_of_squared(height_reward,sig_h);
+	// double r_h = exp_of_squared(height_reward,sig_h);
+	// double r_ee = exp_of_squared(ee_diff_reward,sig_ee);
 
+	double sig_con = 0.3 * scale;
+	
+	double r_con = exp_of_squared(ee_contact_reward,sig_con);
+	double r_safe  = headContact? 0.7 : 1;
+	double r_com = exp_of_squared(com_cop_reward,sig_com);
+
+
+	// rewards.push_back(r_pp);
+	// rewards.push_back(r_h);
+	// rewards.push_back(r_ee);
+	rewards.push_back(r_con);
+	rewards.push_back(r_safe);
+	rewards.push_back(r_com);
 	rewards.push_back(r_pp);
-	rewards.push_back(r_ee);
-	rewards.push_back(r_h);
+
 
 	//skel->computeForwardKinematics(true,true,false);
 	return rewards;
@@ -571,36 +614,37 @@ UpdateReward()
 
 	mRewardParts.clear();
 	double r_tot;
-	if(this->isHit && this->mCurrentFrame>(this->mHitFrame - 15)){
+	if(this->isHit && this->mCurrentFrame>(this->mHitFrame)){
 		std::vector<double> protect_rewards = this->GetBreakfallReward(skel->getPositions());
-		r_tot = protect_rewards[0] * protect_rewards[1] * protect_rewards[2];
+		r_tot = protect_rewards[0]*protect_rewards[1]*protect_rewards[2]*protect_rewards[3];
 		//r_tot = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3])  + 0.05 * tracking_rewards_bvh[4];
-		if(dart::math::isNan(r_tot)){
-			mRewardParts.resize(mRewardLabels.size(), 0.0);
-		}
-		else {
-				mRewardParts.push_back(r_tot);
-				mRewardParts.push_back(protect_rewards[0]);
-				mRewardParts.push_back(protect_rewards[1]);
-				mRewardParts.push_back(protect_rewards[2]);
-				mRewardParts.push_back(1);
-				mRewardParts.push_back(1);
-		}	
+		// if(dart::math::isNan(r_tot)){
+		// 	mRewardParts.resize(mRewardLabels.size(), 0.0);
+		// }
+		// else {
+		// 		mRewardParts.push_back(r_tot);
+		// 		mRewardParts.push_back(protect_rewards[0]);
+		// 		mRewardParts.push_back(protect_rewards[1]);
+		// 		mRewardParts.push_back(protect_rewards[2]);
+		// 		mRewardParts.push_back(1);
+		// 		mRewardParts.push_back(1);
+		// }	
 	}
 	else {
 		r_tot = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3])  + 0.05 * tracking_rewards_bvh[4];
 	
-		if(dart::math::isNan(r_tot)){
+			
+	}
+	if(dart::math::isNan(r_tot)){
 			mRewardParts.resize(mRewardLabels.size(), 0.0);
 		}
-		else {
-				mRewardParts.push_back(r_tot);
-				mRewardParts.push_back(tracking_rewards_bvh[0]);
-				mRewardParts.push_back(tracking_rewards_bvh[1]);
-				mRewardParts.push_back(tracking_rewards_bvh[2]);
-				mRewardParts.push_back(tracking_rewards_bvh[3]);
-				mRewardParts.push_back(tracking_rewards_bvh[4]);
-		}	
+	else {
+			mRewardParts.push_back(r_tot);
+			mRewardParts.push_back(tracking_rewards_bvh[0]);
+			mRewardParts.push_back(tracking_rewards_bvh[1]);
+			mRewardParts.push_back(tracking_rewards_bvh[2]);
+			mRewardParts.push_back(tracking_rewards_bvh[3]);
+			mRewardParts.push_back(tracking_rewards_bvh[4]);
 	}
 	
 }
@@ -725,7 +769,7 @@ GetState()
 	double com_diff = 0;
 	
 	state.resize(p.rows()+v.rows()+1+1+p_next.rows()+ee.rows()+2);
-	state<< p, v, up_vec_angle, root_height, p_next, mAdaptiveStep, ee, mCurrentFrameOnPhase;
+	state<< p, v, up_vec_angle, root_height, p_next, mAdaptiveStep, ee,mCurrentFrameOnPhase;
 
 	return state;
 	
@@ -901,6 +945,26 @@ CheckCollisionWithGround(std::string bodyName){
 		bool isCollide = collisionEngine->collide(this->mCGHL.get(), this->mCGG.get(), option, &result);
 		return isCollide;
 	}
+	else if(bodyName == "LeftForeArm"){
+		bool isCollide = collisionEngine->collide(this->mCGHL.get(), this->mCGG.get(), option, &result);
+		return isCollide;
+	}
+	else if(bodyName == "RightForeArm"){
+		bool isCollide = collisionEngine->collide(this->mCGHL.get(), this->mCGG.get(), option, &result);
+		return isCollide;
+	}
+	else if(bodyName == "LeftLeg"){
+		bool isCollide = collisionEngine->collide(this->mCL.get(), this->mCGG.get(), option, &result);
+		return isCollide;
+	}
+	else if(bodyName == "RightLeg"){
+		bool isCollide = collisionEngine->collide(this->mCR.get(), this->mCGG.get(), option, &result);
+		return isCollide;
+	}
+	else if(bodyName == "Head"){
+		bool isCollide = collisionEngine->collide(this->mCGHL.get(), this->mCGG.get(), option, &result);
+		return isCollide;
+	}
 	else{ // error case
 		std::cout << "check collision : bad body name" << std::endl;
 		return false;
@@ -916,7 +980,7 @@ SetRandomForce(){
 	if(std::rand()%2==0){
 		this->isHit = true;
 	}
-	this->ext_force = std::rand()%70+50;
+	this->ext_force = std::rand()%70+30;
 	this->ext_dir = Eigen::Vector3d::UnitZ();
 	// int dir_idx = std::rand()%(2);
 	// switch(dir_idx){
@@ -932,7 +996,7 @@ SetRandomForce(){
 	if(mtest){
 		
 		this->isHit = true;
-		this->ext_force =120;
+		this->ext_force =50;
 		this->ext_dir = Eigen::Vector3d::UnitZ();
 
 	}

@@ -139,6 +139,9 @@ protected:
 
 	std::unique_ptr<dart::collision::CollisionGroup> mCGEL, mCGER, mCGL, mCGR, mCGG, mCGHR, mCGHL, mCGOBJ; 
 
+	std::unique_ptr<dart::collision::CollisionGroup> mCGAL, mCGAR, mCGH, mCL,mCR; 
+
+
 	double mAdaptiveStep;
 	int mRewardDof;
 	bool mRecord;

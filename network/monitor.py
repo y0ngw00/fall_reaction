@@ -126,7 +126,7 @@ class Monitor(object):
 			i+= 1
 		plt.legend(loc=2)
 		if self.plot:
-			plt.show()
+			plt.draw()
 			if ylim:
 				plt.ylim([0,1])
 			plt.pause(0.001)

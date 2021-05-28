@@ -189,7 +189,6 @@ PYBIND11_MODULE(SimEnv, m)
 		.def("GetStates",&SimEnv::GetStates)
 		.def("SetActions",&SimEnv::SetActions)
 		.def("GetRewards",&SimEnv::GetRewards)
-		.def("GetRewardsByParts",&SimEnv::GetRewardsByParts)
 		.def("GetPhaseLength",&SimEnv::GetPhaseLength)
 		.def("GetDOF",&SimEnv::GetDOF);
 }
