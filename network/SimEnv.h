@@ -23,6 +23,8 @@ public:
 	//For general properties
 	int GetNumState(){ return mNumState;}
 	int GetNumAction(){	return mNumAction;}
+	int GetNumPose(){ return mNumPose;}
+	int GetNumFeature(){ return mNumFeature;}
 
 	//For each slave
 	void Step(int id);
@@ -30,6 +32,7 @@ public:
 	py::tuple IsNanAtTerminal(int id);
 
 	py::array_t<double> GetState(int id);
+	py::array_t<double> GetFeature(int id);
 	void SetAction(py::array_t<double> np_array,int id);
 	double GetReward(int id);
 	py::array_t<double> GetRewardByParts(int id);
@@ -38,6 +41,9 @@ public:
 	void Steps();
 	void Resets(bool RSI);
 	py::array_t<double> GetStates();
+
+	py::array_t<double> GetExpertPoses();
+	py::array_t<double> GetAgentPoses();
 	void SetActions(py::array_t<double> np_array);
 	py::list GetRewardLabels();
 	py::array_t<double> GetRewards();
@@ -54,6 +60,8 @@ private:
 	int mNumSlaves;
 	int mNumState;
 	int mNumAction;
+	int mNumFeature;
+	int mNumPose;
 	
 	std::string mPath;
 };

@@ -10,6 +10,8 @@ class Env(object):
 
 		self.num_state = self.sim_env.GetNumState()
 		self.num_action = self.sim_env.GetNumAction()
+		self.num_feature = self.sim_env.GetNumFeature()
+		self.expert_poses = self.sim_env.GetExpertPoses()
 
 	def reset(self, i, b):
 		self.sim_env.Reset(i, b)
@@ -53,4 +55,5 @@ class Env(object):
 
 				nan_count += 1
 		states = self.sim_env.GetStates()
-		return states, rewards, dones, times, frames, terminal_reason, nan_count 
+		features = self.sim_env.GetAgentPoses()
+		return states, rewards, features, dones, times, frames, terminal_reason, nan_count 

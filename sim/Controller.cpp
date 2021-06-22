@@ -14,6 +14,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	this->mRescaleParameter = std::make_tuple(1.0, 1.0, 1.0);
 	this->mRecord = record;
 	this->mReferenceManager = ref;
+	this->mNumMotions = mReferenceManager->GetNumMotions();
 	this->id = id;
 
 	this->mCharacter = new DPhy::Character(character_path);
@@ -61,7 +62,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	mEndEffectors.push_back("LeftFoot");
 	mEndEffectors.push_back("LeftHand");
 	mEndEffectors.push_back("RightHand");
-	mEndEffectors.push_back("Head");
+	//mEndEffectors.push_back("Head");
 
 	this->mTargetPositions = Eigen::VectorXd::Zero(dof);
 	this->mTargetVelocities = Eigen::VectorXd::Zero(dof);
@@ -72,8 +73,13 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	//temp
 	this->mRewardParts.resize(7, 0.0);
 	this->mNumState = this->GetState().rows();
-
 	this->mNumAction = mActions.size();
+	this->mNumFeature = this->mReferenceManager->GetNumFeature();
+
+	this->mCurrentFeature.setZero();
+	this->mPosePrev.setZero();
+
+
 	ClearRecord();
 	
 	mRewardLabels.clear();
@@ -305,8 +311,8 @@ ClearRecord()
 
 std::vector<double> 
 Controller::
-GetTrackingReward(Eigen::VectorXd position, Eigen::VectorXd position2, 
-	Eigen::VectorXd velocity, Eigen::VectorXd velocity2, bool useVelocity)
+GetTrackingReward(Eigen::VectorXd& position, Eigen::VectorXd& position2, 
+	Eigen::VectorXd& velocity, Eigen::VectorXd& velocity2, bool useVelocity)
 {
 	dart::dynamics::SkeletonPtr skel = this->mCharacter->GetSkeleton();
 	int dof = skel->getNumDofs();
@@ -382,8 +388,10 @@ Controller::
 UpdateReward()
 {
 	dart::dynamics::SkeletonPtr skel = this->mCharacter->GetSkeleton();
-	std::vector<double> tracking_rewards_bvh = this->GetTrackingReward(skel->getPositions(), mTargetPositions,
-								 skel->getVelocities(), mTargetVelocities,  true);
+	Eigen::VectorXd p = skel->getPositions();
+	Eigen::VectorXd v = skel->getVelocities();
+	std::vector<double> tracking_rewards_bvh = this->GetTrackingReward(p, mTargetPositions,
+								 v, mTargetVelocities,  true);
 	double accum_bvh = std::accumulate(tracking_rewards_bvh.begin(), tracking_rewards_bvh.end(), 0.0) / tracking_rewards_bvh.size();
 
 
@@ -403,7 +411,7 @@ UpdateReward()
 }
 Eigen::VectorXd 
 Controller::
-GetEndEffectorStatePosAndVel(const Eigen::VectorXd pos, const Eigen::VectorXd vel) {
+GetEndEffectorStatePosAndVel(const Eigen::VectorXd& pos, const Eigen::VectorXd& vel) {
 	Eigen::VectorXd ret;
 	auto& skel = mCharacter->GetSkeleton();
 	dart::dynamics::BodyNode* root = skel->getRootBodyNode();
@@ -479,6 +487,8 @@ GetState()
 	// p.resize(p_save.rows()-6);
 	// p = p_save.tail(p_save.rows()-6);
 
+	MakeFeature();
+
 	int n_bnodes = mCharacter->GetSkeleton()->getNumBodyNodes();
 	int num_p = (n_bnodes - 1) * 6;
 	p.resize(num_p);
@@ -519,13 +529,85 @@ GetState()
 	double phase = ((int) mCurrentFrame % mReferenceManager->GetPhaseLength()) / (double) mReferenceManager->GetPhaseLength();
 	Eigen::VectorXd state;
 
+
 	double com_diff = 0;
 	
-	state.resize(p.rows()+v.rows()+1+1+p_next.rows()+ee.rows()+2);
-	state<< p, v, up_vec_angle, root_height, p_next, mAdaptiveStep, ee, mCurrentFrameOnPhase;
+	state.resize(p.rows()+v.rows()+ee.rows()+1+1+p_next.rows()+2);
+	state<< p, v, ee,up_vec_angle, root_height, p_next, mAdaptiveStep, mCurrentFrameOnPhase;
+
+	// for(int i=0;i<state.size();i++){
+
+	// 	if(std::isinf(state[i])){
+	// 		std::cout<<"At index for State :"<<i<<std::endl;
+	// 	}
+	// }
+	//std::cout<<p.rows()<<"\t"<<v.rows()<<"\t"<<ee.rows()<<"\t"<<std::endl;
+
+	
 
 	return state;
 	
+}
+
+void
+Controller::
+MakeFeature()
+{
+	int posesize = this->mReferenceManager->GetNumFeature();
+
+	dart::dynamics::SkeletonPtr skel = mCharacter->GetSkeleton();
+	dart::dynamics::BodyNode* root = skel->getRootBodyNode();
+	Eigen::Isometry3d cur_root_inv = root->getWorldTransform().inverse();
+	Eigen::VectorXd p = skel->getPositions();
+	Eigen::VectorXd v = skel->getVelocities();
+
+	Eigen::VectorXd ee;
+	ee.resize(mEndEffectors.size()*3);
+	for(int i=0;i<mEndEffectors.size();i++)
+	{
+		Eigen::Isometry3d transform = cur_root_inv * skel->getBodyNode(mEndEffectors[i])->getWorldTransform();
+		ee.segment<3>(3*i) << transform.translation();
+	}
+
+	Eigen::VectorXd mPoseCur;
+	mPoseCur.resize(p.rows()-6+ v.rows()+ ee.rows());
+	mPoseCur<<p.tail(p.rows()-6),v,ee;
+
+	// std::cout<<"Expert Feature = "<<posesize<<std::endl;
+	// std::cout<<"Agent Feature = "<<mPoseCur.rows()<<std::endl;
+	Eigen::VectorXd feature(posesize);
+
+	for(int i=0;i<mPoseCur.size();i++){
+		if(std::isnan(mPoseCur[i])){
+			mPoseCur[i]=1e-6;
+		}
+		if(std::isinf(mPoseCur[i])){
+			std::cout<<"At index for Current :"<<i<<std::endl;
+		}
+	}
+
+	if(this->mPosePrev.isZero(0)){
+		
+		this->mPosePrev = mPoseCur;
+		feature<<mPosePrev,mPoseCur;
+	}
+	else{
+		feature<<mPosePrev,mPoseCur;
+	}
+	// for(int i=0;i<mCurrentFeature.size();i++){
+	// 	if(std::isnan(mCurrentFeature[i])){
+	// 		mCurrentFeature[i]=1e-6;
+	// 	}
+	// 	if(std::isinf(mCurrentFeature[i])){
+	// 		std::cout<<"At index for Total :"<<i<<std::endl;
+	// 		std::cout<<mCurrentFeature<<std::endl;
+	// 	}
+	// }
+
+	this->mCurrentFeature = feature;
+	this->mPosePrev = mPoseCur;
+
+
 }
 
 bool
@@ -576,7 +658,11 @@ Reset(bool RSI)
 {
 	this->mWorld->reset();
 
-	mReferenceManager->SelectMotion();
+	
+	int motion_it = std::rand()%this->mNumMotions;
+	mReferenceManager->SelectMotion(motion_it);
+	// this->motion_it++;
+	
 	dart::dynamics::SkeletonPtr skel = mCharacter->GetSkeleton();
 	skel->clearConstraintImpulses();
 	skel->clearInternalForces();
@@ -598,7 +684,6 @@ Reset(bool RSI)
 	// 	mFitness.sum_pos.setZero();
 	// 	mFitness.sum_vel.setZero();
 	// }
-
 	this->mCurrentFrameOnPhase = this->mCurrentFrame;
 	this->mStartFrame = this->mCurrentFrame;
 	this->nTotalSteps = 0;
@@ -645,20 +730,8 @@ Reset(bool RSI)
 	this->mStartRoot = this->mCharacter->GetSkeleton()->getPositions().segment<3>(3);
 	this->mRootZeroDiff= mRootZero.segment<3>(3) - mReferenceManager->GetMotion(mCurrentFrameOnPhase)->GetPosition().segment<3>(3);
 	
-	// dbg_LeftPoints= std::vector<Eigen::Vector3d>();
-	// dbg_RightPoints= std::vector<Eigen::Vector3d>();
-	// dbg_LeftConstraintPoint= Eigen::Vector3d::Zero();
-	// dbg_RightConstraintPoint= Eigen::Vector3d::Zero();
-	
-	// // std::cout<<"RSI : "<<mCurrentFrame<<std::endl;
-	// if(leftHandConstraint && mCurrentFrame <30) removeHandFromBar(true);
-	// if(rightHandConstraint && mCurrentFrame <30) removeHandFromBar(false);
-
-	// //45, 59
-	// left_detached= (mCurrentFrame >=37) ? true: false; 
-	// right_detached= (mCurrentFrame >=51) ? true: false;
-
-	// min_hand = 10000;
+	this->mCurrentFeature.setZero();
+	this->mPosePrev.setZero();
 
 
 }

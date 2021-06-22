@@ -1001,7 +1001,7 @@ Eigen::VectorXd solveMCIK(dart::dynamics::SkeletonPtr skel, const std::vector<st
 	}
 	return newPose;
 }
-std::vector<Eigen::VectorXd> Align(std::vector<Eigen::VectorXd> data, Eigen::VectorXd target) {
+std::vector<Eigen::VectorXd> Align(const std::vector<Eigen::VectorXd>& data,const Eigen::VectorXd& target) {
 	std::vector<Eigen::VectorXd> result = data;
 
 	Eigen::Isometry3d T0_phase = dart::dynamics::FreeJoint::convertToTransform(data[0].head<6>());

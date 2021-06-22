@@ -26,20 +26,21 @@ public:
 
 	void Step();
 
-
-
 	const dart::simulation::WorldPtr& GetWorld() {return mWorld;}
 	const dart::dynamics::SkeletonPtr& GetSkeleton() {return this->mCharacter->GetSkeleton();}
 
-	std::vector<double> GetTrackingReward(Eigen::VectorXd position, Eigen::VectorXd position2, 
-						Eigen::VectorXd velocity, Eigen::VectorXd velocity2, bool useVelocity);
+	std::vector<double> GetTrackingReward(Eigen::VectorXd& position, Eigen::VectorXd& position2, 
+						Eigen::VectorXd& velocity, Eigen::VectorXd& velocity2, bool useVelocity);
 	double GetParamReward();
 	void UpdateReward();
 	double GetReward() {return mRewardParts[0]; }
 	std::vector<std::string> GetRewardLabels() {return mRewardLabels; }
 
-	Eigen::VectorXd GetEndEffectorStatePosAndVel(const Eigen::VectorXd pos, const Eigen::VectorXd vel);
+	Eigen::VectorXd GetEndEffectorStatePosAndVel(const Eigen::VectorXd& pos, const Eigen::VectorXd& vel);
+	
 	Eigen::VectorXd GetState();
+	void MakeFeature();
+	Eigen::VectorXd GetFeaturePair(){return this->mCurrentFeature;}
 
 	bool CheckCollisionWithGround(std::string bodyName);
 
@@ -56,6 +57,8 @@ public:
 
 	int GetNumState() { return this->mNumState;}
 	int GetNumAction() { return this->mNumAction;}
+
+	
 	void SetAction(const Eigen::VectorXd& action){ this->mActions = action; }
 
 	double GetTimeElapsed(){return this->mTimeElapsed;}
@@ -72,8 +75,7 @@ public:
 	Eigen::VectorXd GetBVHPositions(int idx) { return this->mRecordBVHPosition[idx]; }
 	int GetRecordSize() { return this->mRecordPosition.size(); }
 	std::pair<bool, bool> GetFootContact(int idx) { return this->mRecordFootContact[idx]; }
-	std::vector<double> GetRewardByParts() {return mRewardParts; } 
-
+	std::vector<double> GetRewardByParts() {return mRewardParts; }
 
 	void SaveDisplayedData(std::string directory, bool bvh);
 
@@ -94,7 +96,8 @@ protected:
 	int mControlHz;
 	int mSimulationHz;
 
-	int mNumState, mNumAction;
+	int mNumState, mNumAction,mNumFeature;
+	int mNumMotions;
 	Eigen::VectorXd mActions;
 	std::vector<double> mRewardParts;
 
@@ -151,7 +154,9 @@ protected:
 	Eigen::Vector3d mRootZeroDiff; //root 0th frame
 	Eigen::Vector3d mStartFoot; //middle of two feet at 0th frame
 
-
+	int motion_it;
+	Eigen::VectorXd mCurrentFeature;
+	Eigen::VectorXd mPosePrev;
 
 };
 }

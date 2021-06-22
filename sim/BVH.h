@@ -105,8 +105,6 @@ public:
 	unsigned GetNumChannels() const { return num_motion_channels; }
 	float GetTimestep() const { return mTimestep; }
     void AddMapping(const std::string& body_node,const std::string& bvh_node);
-    std::vector<std::vector<BVH*>> getBVHContainer();
-
 
     void SetRotation(JOINT* joint, const Eigen::VectorXd& m_t);
 	void SetRotation(JOINT* joint,const Eigen::Matrix3d& R_t);

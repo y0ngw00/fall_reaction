@@ -27,6 +27,7 @@ class Monitor(object):
 		
 		self.num_state = self.env.num_state
 		self.num_action = self.env.num_action
+		self.num_feature = self.env.num_feature
 		self.RMS = RunningMeanStd(shape=(self.num_state))	
 		self.plot = plot
 		self.directory = directory
@@ -50,7 +51,10 @@ class Monitor(object):
 
 		self.terminated = [False]*self.num_slaves
 		self.states = [0]*self.num_slaves
+		self.features = [0]*self.num_feature
+		self.ExpertFeatures = self.env.expert_poses
 		self.prevframes = [0]*self.num_slaves
+
 		
 		self.rewards_dense_phase = [0]*self.num_slaves
 		self.rewards_sparse_phase = [0]*self.num_slaves
@@ -62,6 +66,12 @@ class Monitor(object):
 
 	def getStates(self):
 		return np.array(self.states).astype('float32') 
+
+	def getFeatures(self):
+		return np.array(self.features).astype('float32')
+
+	def getExpertFeatures(self):
+		return np.array(self.ExpertFeatures).astype('float32') 
 
 	def setTerminated(self, idx):
 		self.terminated[idx] = True
@@ -84,7 +94,7 @@ class Monitor(object):
 		self.prevframes[i] = 0
 
 	def step(self, actions, record=True):
-		self.states, rewards, dones, times, frames, terminal_reason, nan_count =  self.env.step(actions)
+		self.states, rewards, self.features, dones, times, frames, terminal_reason, nan_count =  self.env.step(actions)
 
 		params = np.zeros(self.num_slaves)
 		curframes = np.array(self.states)[:,-1]

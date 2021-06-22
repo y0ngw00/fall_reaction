@@ -321,41 +321,6 @@ SetMotion(double t)
 	
 }
 
-std::vector<std::vector<BVH*>>
-BVH::
-getBVHContainer() {
-
-	std::vector<std::vector<BVH*>> bvh_container;
-	BVH* bvh_start;
-	vector<BVH*> bvh_normal, bvh_fast;
-
-
-    bvh_normal.clear();
-    bvh_start = new BVH("../Motionbvh/mrl/tpose2.bvh");
-    bvh_container.push_back({bvh_start});
-
-    BVH* bvh_walk = new BVH("../Motionbvh/cmu/16_21_walk.bvh");
-    bvh_normal.push_back(bvh_walk);
-    BVH* bvh_rturn= new BVH("../Motionbvh/cmu/16_13_walk, veer right.bvh");
-    bvh_normal.push_back(bvh_rturn);
-    BVH* bvh_lturn = new BVH("../Motionbvh/cmu/16_11_walk, veer left.bvh");
-    bvh_normal.push_back(bvh_lturn);
-
-    bvh_container.push_back(bvh_normal);
-
-    BVH* bvh_fwalk = new BVH("../Motionbvh/cmu/16_35_run&jog.bvh");
-    bvh_fast.push_back(bvh_fwalk);
-    BVH* bvh_frturn = new BVH("../Motionbvh/cmu/16_39_run&jog, veer right.bvh");
-    bvh_fast.push_back(bvh_frturn);
-    BVH* bvh_flturn = new BVH("../Motionbvh/cmu/16_37_run&jog, veer left.bvh");
-    bvh_fast.push_back(bvh_flturn);
-
-    bvh_container.push_back(bvh_fast);
-//    {
-//        std::vector<std::unique_ptr<BVH>> bvhs = std::make_unique<BVH>();
-//    }
-    return bvh_container; 
-}
 
 JOINT* BVH::getJoint(std::string joint_name)
 {

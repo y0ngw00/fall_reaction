@@ -28,6 +28,12 @@ ReferenceManager(Character* character)
 	contact.push_back("LeftToe");
 	contact.push_back("LeftFoot");
 
+	mEndEffectors.clear();
+	mEndEffectors.push_back("RightFoot");
+	mEndEffectors.push_back("LeftFoot");
+	mEndEffectors.push_back("LeftHand");
+	mEndEffectors.push_back("RightHand");
+
 }
 
 void
@@ -43,11 +49,18 @@ LoadMotionFromBVH(std::string filename)
 
 	std::ifstream txtread;
 	txtread.open(txt_path);
+	if(!txtread.is_open()){
+		std::cout<<"Text file does not exist from : "<< txt_path << std::endl;
+		return;
+	}
 	while(txtread>>buffer){
 		motion_list.push_back(std::string(buffer));
 	}
+	this->mNumMotions=motion_list.size();
+	this->mMotionPhases.resize(mNumMotions);
 
 	for(auto p :motion_list){
+		int it=0;
 		mMotions_raw.clear();
 		mMotions_phase.clear();
 
@@ -161,6 +174,7 @@ LoadMotionFromBVH(std::string filename)
 
 		mPhaseLength = mMotions_raw.size();
 		mTimeStep = bvh->GetTimestep();
+		mMotionPhases[it]=mPhaseLength;
 
 		for(int i = 0; i < mPhaseLength; i++) {
 			mMotions_phase.push_back(new Motion(mMotions_raw[i]));
@@ -172,11 +186,12 @@ LoadMotionFromBVH(std::string filename)
 		 }
 		 
 		delete bvh;
-		this->GenerateMotionsFromSinglePhase(1000, true, mMotions_phase, mMotions_container);
-
-		
+		this->GenerateMotionsFromSinglePhase(1000, true, mMotions_phase, this->mMotions_container);
+		it++;
 	}
-	SelectMotion();
+	// SelectMotion();
+
+	this->GetExpertPose(mExpertPoses);
 
 
 }
@@ -297,13 +312,10 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_p
 
 void 
 ReferenceManager::
-SelectMotion(){
-	int Motion_num = mMotions_container.size();
-
-	int i = 0;
-
-	mMotions_gen = mMotions_container[i];
+SelectMotion(int i){
+	mMotions_gen = this->mMotions_container[i];
 }
+
 
 Motion*
 ReferenceManager::
@@ -382,6 +394,78 @@ GetContacts(double t)
 
 	}
 	return result;
+}
+
+void 
+ReferenceManager::
+GetExpertPose(std::vector<Eigen::VectorXd>& pose_container)
+{
+
+	// Current local rotation and local velocity
+	int mTotalMotions = GetNumMotions();
+
+	for(int motion_it=0;motion_it<mTotalMotions ;motion_it++){
+		SelectMotion(motion_it);
+		int totalframe = GetPhaseLength(motion_it);
+		for(int frame = 0; frame<totalframe; frame++){
+			Motion* p_v_target =GetMotion(frame);
+			int p_size = p_v_target->GetPosition().size();
+			Eigen::VectorXd p = p_v_target->GetPosition();
+			Eigen::VectorXd v = p_v_target->GetVelocity();
+			delete p_v_target;
+
+			// next local rotation and local velocity
+			p_v_target = GetMotion(frame+1);
+			Eigen::VectorXd p_next = p_v_target->GetPosition();
+			Eigen::VectorXd v_next = p_v_target->GetVelocity();
+			delete p_v_target;
+
+			auto& skel = mCharacter->GetSkeleton();
+			dart::dynamics::BodyNode* root = skel->getRootBodyNode();
+			Eigen::VectorXd p_save = skel->getPositions();
+			Eigen::VectorXd v_save = skel->getVelocities();
+
+			// current 3D position of end-effectors represented in the character's local frame
+			skel->setPositions(p);
+			skel->setVelocities(v);
+
+			Eigen::VectorXd ee;
+			ee.resize(mEndEffectors.size()*3);
+			Eigen::Isometry3d cur_root_inv = root->getWorldTransform().inverse();
+			for(int i=0;i<mEndEffectors.size();i++)
+			{		
+				Eigen::Isometry3d transform = cur_root_inv * skel->getBodyNode(mEndEffectors[i])->getWorldTransform();
+				ee.segment<3>(3*i) << transform.translation();
+			}
+
+			// next 3D position of end-effectors represented in the character's local frame
+			skel->setPositions(p_next);
+			skel->setVelocities(v_next);
+
+			cur_root_inv = root->getWorldTransform().inverse();
+			Eigen::VectorXd ee_next;
+			ee_next.resize(mEndEffectors.size()*3);
+			for(int i=0;i<mEndEffectors.size();i++)
+			{		
+				Eigen::Isometry3d transform = cur_root_inv * skel->getBodyNode(mEndEffectors[i])->getWorldTransform();
+				ee_next.segment<3>(3*i) << transform.translation();
+			}
+
+			skel->setPositions(p_save);
+			skel->setVelocities(v_save);
+
+			Eigen::VectorXd pose;
+			pose.resize((p.rows()-6 +v.rows()+ee.rows()) * 2 );
+			pose<< p.tail(p_size-6), v, ee, p_next.tail(p_size-6), v_next, ee_next;
+
+			pose_container.push_back(pose);
+		}
+	}
+
+	this->mNumFeature = mExpertPoses[0].size();
+	this->mNumPose = mExpertPoses.size();
+
+	
 }
 double 
 ReferenceManager::

@@ -5,7 +5,7 @@ activ = tf.nn.relu
 kernel_initialize_func = tf.contrib.layers.xavier_initializer()
 actor_layer_size = 512
 critic_layer_size = 512
-regression_layer_size = 512
+discriminator_layer_size = 16
 initial_state_layer_size = 512
 l2_regularizer_scale = 0.0
 regularizer = tf.contrib.layers.l2_regularizer(l2_regularizer_scale)
@@ -109,38 +109,49 @@ class Critic(object):
 			return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, self.scope)
 		else:
 			return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.scope)
-class RegressionNet(object):
-	def __init__(self, sess, scope, input, output, postfix=''):
+
+
+class Discriminator(object):
+	def __init__(self, sess, scope, feature, reuse=False, postfix=''):
 		self.sess = sess
 		self.name = scope
-		self.scope = scope + '_Regression' + postfix
-		self.value = self.createNetwork(input, output, False)
+		self.scope = scope + '_Discriminator' + postfix
+		self.reuse = reuse
+		self.pred = self.createNetwork(feature, reuse)
+		self.feature = feature
 
-		self.input = input
-	def createNetwork(self, input, output, reuse):	
+
+	def createNetwork(self, state, reuse):	
 		with tf.variable_scope(self.scope, reuse=reuse):
-			L1 = tf.layers.dense(input, regression_layer_size, activation=activ,name='L1',
+			L1 = tf.layers.dense(state,1024,activation=tf.nn.leaky_relu,name='L1',
 	            kernel_initializer=kernel_initialize_func,
 	            kernel_regularizer=regularizer
 			)
 
-			L2 = tf.layers.dense(L1, regression_layer_size, activation=activ,name='L2',
+			L2 = tf.layers.dense(L1,discriminator_layer_size,activation=tf.nn.leaky_relu,name='L2',
 	            kernel_initializer=kernel_initialize_func,
 	            kernel_regularizer=regularizer
 			)
 
-			out = tf.layers.dense(L2, output, name='out',
-	            kernel_initializer=kernel_initialize_func,
+			L3 = tf.layers.dense(L2,1,activation=None,name='out',
+				kernel_initializer=tf.random_uniform_initializer(minval=-1, maxval=1),
 	            kernel_regularizer=regularizer
 			)
 
-			return out
-	def getValue(self, states):
+			out = L2
+			
+			return out[:,0]
+
+	def getPrediction(self, features):
 		with tf.variable_scope(self.scope):
-			return self.sess.run(self.value, feed_dict={self.input :states})
+			prediction = self.sess.run([self.pred], feed_dict={self.feature: features})
+			return np.array(prediction).T
+
 
 	def getVariable(self, trainable_only=False):
 		if trainable_only:
 			return tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, self.scope)
 		else:
 			return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.scope)
+
+

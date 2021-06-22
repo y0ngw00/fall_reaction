@@ -27,6 +27,8 @@ SimEnv(int num_slaves, std::string ref, std::string training_path)
 	}
 	this->mNumState = mSlaves[0]->GetNumState();
 	this->mNumAction = mSlaves[0]->GetNumAction();
+	this->mNumFeature = mReferenceManager->GetNumFeature();
+	this->mNumPose = mReferenceManager->GetNumPose();
 
 }
 
@@ -63,6 +65,12 @@ SimEnv::
 GetState(int id)
 {
 	return DPhy::toNumPyArray(mSlaves[id]->GetState());
+}
+py::array_t<double>
+SimEnv::
+GetFeature(int id)
+{
+	return DPhy::toNumPyArray(mSlaves[id]->GetFeaturePair());
 }
 void 
 SimEnv::
@@ -131,6 +139,27 @@ GetStates()
 	}
 	return DPhy::toNumPyArray(states);
 }
+
+py::array_t<double>
+SimEnv::
+GetExpertPoses()
+{
+	std::vector<Eigen::VectorXd> poses = mReferenceManager->GetExpertPoseContainer();
+	return DPhy::toNumPyArray(poses);
+}
+py::array_t<double>
+SimEnv::
+GetAgentPoses()
+{
+	Eigen::MatrixXd states(mNumSlaves,mNumFeature);
+
+	for (int id = 0; id < mNumSlaves; ++id)
+	{
+		states.row(id) = mSlaves[id]->GetFeaturePair().transpose();
+	}
+	return DPhy::toNumPyArray(states);
+}
+
 void
 SimEnv::
 SetActions(py::array_t<double> np_array)
@@ -176,9 +205,12 @@ PYBIND11_MODULE(SimEnv, m)
         .def(py::init<int, std::string, std::string>())
 		.def("GetNumState",&SimEnv::GetNumState)
 		.def("GetNumAction",&SimEnv::GetNumAction)
+		.def("GetNumPose",&SimEnv::GetNumPose)
+		.def("GetNumFeature",&SimEnv::GetNumFeature)
 		.def("Step",&SimEnv::Step)
 		.def("Reset",&SimEnv::Reset)
 		.def("GetState",&SimEnv::GetState)
+		.def("GetFeature",&SimEnv::GetFeature)
 		.def("SetAction",&SimEnv::SetAction)
 		.def("GetRewardLabels",&SimEnv::GetRewardLabels)
 		.def("GetReward",&SimEnv::GetReward)
@@ -187,6 +219,8 @@ PYBIND11_MODULE(SimEnv, m)
 		.def("Resets",&SimEnv::Resets)
 		.def("IsNanAtTerminal",&SimEnv::IsNanAtTerminal)
 		.def("GetStates",&SimEnv::GetStates)
+		.def("GetExpertPoses",&SimEnv::GetExpertPoses)
+		.def("GetAgentPoses",&SimEnv::GetAgentPoses)
 		.def("SetActions",&SimEnv::SetActions)
 		.def("GetRewards",&SimEnv::GetRewards)
 		.def("GetRewardsByParts",&SimEnv::GetRewardsByParts)

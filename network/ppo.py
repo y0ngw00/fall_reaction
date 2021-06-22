@@ -24,7 +24,7 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 os.environ['CUDA_VISIBLE_DEVICES'] = ''
 if type(tf.contrib) != types.ModuleType:  # if it is LazyLoader
 	tf.contrib._warning = None
-class PPO(object):
+class AMP(object):
 	def __init__(self, learning_rate_actor=2e-4, learning_rate_critic=0.001, learning_rate_decay=0.9993,
 		gamma=0.95, gamma_sparse=0.99, lambd=0.95, epsilon=0.2):
 		random.seed(int(time.time()))
@@ -389,19 +389,19 @@ class PPO(object):
 			if self.learning_rate_actor > 1e-5:
 				self.learning_rate_actor = self.learning_rate_actor * self.learning_rate_decay
 
-			if it_cur % 5 == 4:
-				summary = self.env.printSummary()
-				self.printNetworkSummary()
-				if self.directory is not None:
-					self.save()
+			#if it_cur % 5 == 4:
+			summary = self.env.printSummary()
+			self.printNetworkSummary()
+			if self.directory is not None:
+				self.save()
 
-				if self.directory is not None and self.reward_max < summary['r_per_e']:
-					self.reward_max = summary['r_per_e']
-					self.env.RMS.save(self.directory+'rms-rmax')
+			if self.directory is not None and self.reward_max < summary['r_per_e']:
+				self.reward_max = summary['r_per_e']
+				self.env.RMS.save(self.directory+'rms-rmax')
 
-					os.system("cp {}/network-{}.data-00000-of-00001 {}/network-rmax.data-00000-of-00001".format(self.directory, 0, self.directory))
-					os.system("cp {}/network-{}.index {}/network-rmax.index".format(self.directory, 0, self.directory))
-					os.system("cp {}/network-{}.meta {}/network-rmax.meta".format(self.directory, 0, self.directory))
+				os.system("cp {}/network-{}.data-00000-of-00001 {}/network-rmax.data-00000-of-00001".format(self.directory, 0, self.directory))
+				os.system("cp {}/network-{}.index {}/network-rmax.index".format(self.directory, 0, self.directory))
+				os.system("cp {}/network-{}.meta {}/network-rmax.meta".format(self.directory, 0, self.directory))
 
 
 
@@ -443,8 +443,8 @@ if __name__=="__main__":
 	else:
 		env = Monitor(ref=args.ref, num_slaves=args.nslaves, directory=directory, plot=args.plot)
 
-	ppo = PPO()
+	amp = AMP()
 
-	ppo.initTrain(env=env, name=args.test_name, directory=directory, pretrain=args.pretrain)
+	amp.initTrain(env=env, name=args.test_name, directory=directory, pretrain=args.pretrain)
 
-	ppo.train(args.ntimesteps)
+	amp.train(args.ntimesteps)
