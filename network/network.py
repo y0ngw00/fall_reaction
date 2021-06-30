@@ -5,7 +5,7 @@ activ = tf.nn.relu
 kernel_initialize_func = tf.contrib.layers.xavier_initializer()
 actor_layer_size = 512
 critic_layer_size = 512
-discriminator_layer_size = 16
+discriminator_layer_size = 256
 initial_state_layer_size = 512
 l2_regularizer_scale = 0.0
 regularizer = tf.contrib.layers.l2_regularizer(l2_regularizer_scale)
@@ -123,7 +123,7 @@ class Discriminator(object):
 
 	def createNetwork(self, state, reuse):	
 		with tf.variable_scope(self.scope, reuse=reuse):
-			L1 = tf.layers.dense(state,1024,activation=tf.nn.leaky_relu,name='L1',
+			L1 = tf.layers.dense(state,discriminator_layer_size,activation=tf.nn.leaky_relu,name='L1',
 	            kernel_initializer=kernel_initialize_func,
 	            kernel_regularizer=regularizer
 			)
@@ -138,7 +138,7 @@ class Discriminator(object):
 	            kernel_regularizer=regularizer
 			)
 
-			out = L2
+			out = L3
 			
 			return out[:,0]
 

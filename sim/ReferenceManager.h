@@ -68,6 +68,12 @@ public:
 	int GetNumFeature() { return this->mNumFeature;}
 	int GetNumPose() { return this->mNumPose;}
 	std::vector<Eigen::VectorXd> GetExpertPoseContainer() {return this->mExpertPoses;}
+	void SetRandomTarget(const Eigen::Vector3d& root_pos);
+
+	Eigen::Vector3d GetTargetPosition(){return this->target_pos;}
+	double GetTargetPositionLimit(){return this->mMaxTargetDist;}
+	double GetAccessThreshold(){return this->dist_threshold;}
+	double GetTargetSpeed(){return this->mTargetSpeed;}
 
 		
 
@@ -81,6 +87,7 @@ protected:
 	int mPhaseLength;
 	int smooth_time;
 	int mNumMotions;
+	int mFramePerMotion;
 	double mTimeStep;
 
 	double mSlaves;
@@ -109,6 +116,14 @@ protected:
 	int motion_it;
 	std::vector<Eigen::VectorXd> mExpertPoses;
 	std::vector<std::string> mEndEffectors;
+
+	Eigen::Vector3d target_pos;
+	double max_dist;
+	double mMaxTargetDist;
+	double dist_threshold;
+	double mTargetSpeed;
+
+
 
 };
 

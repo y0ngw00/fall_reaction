@@ -1,1 +1,10 @@
 mxm_walk.bvh
+mxm_idle.bvh
+mxm_stopandgo.bvh
+mxm_turn_180.bvh
+mxm_walk_right.bvh
+mxm_walk_right2.bvh
+mxm_walk_left.bvh
+mxm_walk_circle.bvh
+mxm_walk_circle_r.bvh
+mxm_walk_backward.bvh

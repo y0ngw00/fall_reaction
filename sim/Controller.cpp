@@ -11,6 +11,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 {
 
 	initPhysicsEnv();
+
 	this->mRescaleParameter = std::make_tuple(1.0, 1.0, 1.0);
 	this->mRecord = record;
 	this->mReferenceManager = ref;
@@ -53,7 +54,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	this->mCGG = collisionEngine->createCollisionGroup(this->mGround.get());
 	int num_body_nodes = mInterestedDof / 3;
 	int dof = this->mCharacter->GetSkeleton()->getNumDofs(); 
-	
+
 	mActions = Eigen::VectorXd::Zero(mInterestedDof + 1);
 	mActions.setZero();
 
@@ -75,6 +76,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	this->mNumState = this->GetState().rows();
 	this->mNumAction = mActions.size();
 	this->mNumFeature = this->mReferenceManager->GetNumFeature();
+	this->mNumPose = this->mReferenceManager->GetNumPose();
 
 	this->mCurrentFeature.setZero();
 	this->mPosePrev.setZero();
@@ -92,6 +94,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	mRewardLabels.push_back("time");
 
 	if(mRecord) mReferenceManager->setRecord();
+
 }
 
 void 
@@ -149,7 +152,6 @@ Step()
 	this->mPDTargetVelocities = p_v_target->GetVelocity();
 	delete p_v_target;
 
-
 	int count_dof = 0;
 
 	for(int i = 1; i <= num_body_nodes; i++){
@@ -198,6 +200,12 @@ Step()
 	if(mRecord) {
 		SaveStepInfo();
 	}
+
+	// if((int)this->mTimeElapsed % 180 ==0){
+	// 	Eigen::Vector3d com = mCharacter->GetSkeleton()->getCOM();
+	// 	this->mReferenceManager->SetRandomTarget(com);
+	// }
+
 
 	mPrevTargetPositions = mTargetPositions;
 
@@ -292,7 +300,6 @@ UpdateTerminalInfo()
 
 	skel->setPositions(p_save);
 	skel->setVelocities(v_save);
-	//skel->computeForwardKinematics(true,true,false);
 
 }
 void 
@@ -356,10 +363,10 @@ GetTrackingReward(Eigen::VectorXd& position, Eigen::VectorXd& position2,
 	
 	double scale = 1.0;
 
-	double sig_p = 0.6 * scale; 
+	double sig_p = 0.3 * scale; 
 	double sig_v = 3.0 * scale;	
 	double sig_com = 0.2 * scale;		
-	double sig_ee = 0.5 * scale;		
+	double sig_ee = 0.2 * scale;		
 
 	double r_p = exp_of_squared(p_diff_reward,sig_p);
 	double r_v;
@@ -531,17 +538,13 @@ GetState()
 
 
 	double com_diff = 0;
+
+	//Eigen::Vector3d target_pos = Eigen::Vector3d::Zero();
+	//mReferenceManager->GetTargetPosition();
 	
-	state.resize(p.rows()+v.rows()+ee.rows()+1+1+p_next.rows()+2);
-	state<< p, v, ee,up_vec_angle, root_height, p_next, mAdaptiveStep, mCurrentFrameOnPhase;
+	state.resize(p.rows()+v.rows()+ee.rows()+1+1+1);
+	state<< p, v, ee,up_vec_angle, root_height,mCurrentFrameOnPhase;
 
-	// for(int i=0;i<state.size();i++){
-
-	// 	if(std::isinf(state[i])){
-	// 		std::cout<<"At index for State :"<<i<<std::endl;
-	// 	}
-	// }
-	//std::cout<<p.rows()<<"\t"<<v.rows()<<"\t"<<ee.rows()<<"\t"<<std::endl;
 
 	
 
@@ -671,19 +674,7 @@ Reset(bool RSI)
 	if(RSI) {
 		this->mCurrentFrame = (int) dart::math::Random::uniform(0.0, mReferenceManager->GetPhaseLength()-5.0);
 	}
-	// else {
-	// 	this->mCurrentFrame = 0; // 0;
-	// 	this->mParamRewardTrajectory = 0;
-	// 	this->mTrackingRewardTrajectory = 0;
-	// 	mFitness.sum_contact = 0;
-	// 	mFitness.sum_slide = 0;
-	// 	mFitness.sum_hand_ct = 0;
-	// 	mFitness.hand_ct_cnt = 0;
-	// 	mFitness.sum_pos.resize(skel->getNumDofs());
-	// 	mFitness.sum_vel.resize(skel->getNumDofs());
-	// 	mFitness.sum_pos.setZero();
-	// 	mFitness.sum_vel.setZero();
-	// }
+
 	this->mCurrentFrameOnPhase = this->mCurrentFrame;
 	this->mStartFrame = this->mCurrentFrame;
 	this->nTotalSteps = 0;
@@ -691,8 +682,9 @@ Reset(bool RSI)
 
 	Motion* p_v_target;
 	p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
-	this->mTargetPositions = p_v_target->GetPosition();
+	// Eigen::VectorXd Initialpose = p_v_target->GetPosition();
 	this->mTargetVelocities = p_v_target->GetVelocity();
+	this->mTargetPositions = p_v_target->GetPosition();
 	delete p_v_target;
 
 	// // Eigen::VectorXd nextTargetPositions = mReferenceManager->GetPosition(mCurrentFrame+1, isAdaptive);
@@ -700,6 +692,17 @@ Reset(bool RSI)
 	// // std::cout <<  mCharacter->GetSkeleton()->getPositionDifferences(nextTargetPositions, mTargetPositions).segment<3>(3).transpose() << std::endl;
 	this->mPDTargetPositions = mTargetPositions;
 	this->mPDTargetVelocities = mTargetVelocities;
+
+	// int dof = this->mCharacter->GetSkeleton()->getNumDofs(); 
+	// Eigen::VectorXd mZeropos(dof);
+	// Eigen::VectorXd mZerovel(dof);
+	// mZeropos.setZero();
+	// mZerovel.setZero();
+
+	// mZeropos.segment<3>(3) = Initialpose.segment<3>(3);
+	// this->mTargetPositions = mZeropos;
+	// this->mTargetVelocities = mZeropos;
+
 
 	skel->setPositions(mTargetPositions);
 	skel->setVelocities(mTargetVelocities);
@@ -732,6 +735,8 @@ Reset(bool RSI)
 	
 	this->mCurrentFeature.setZero();
 	this->mPosePrev.setZero();
+
+	//this->mReferenceManager->SetRandomTarget(this->mStartRoot);
 
 
 }

@@ -268,8 +268,7 @@ void BVH::load(std::string bvh_file_name)
 	load_success = true;
 	std::cout<<"Bvh File is loaded"<<std::endl;
 	std::cout<<"The number of frames : "<<num_frames<<std::endl;
-	std::cout<<"The time step : "<<mTimestep<<std::endl;
-	std::cout<<std::endl;
+	//std::cout<<"The time step : "<<mTimestep<<std::endl;
 	return;
 
 bvh_error:

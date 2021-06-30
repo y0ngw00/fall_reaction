@@ -31,6 +31,7 @@ public:
 
 	std::vector<double> GetTrackingReward(Eigen::VectorXd& position, Eigen::VectorXd& position2, 
 						Eigen::VectorXd& velocity, Eigen::VectorXd& velocity2, bool useVelocity);
+	double GetHeadingReward();
 	double GetParamReward();
 	void UpdateReward();
 	double GetReward() {return mRewardParts[0]; }
@@ -57,6 +58,8 @@ public:
 
 	int GetNumState() { return this->mNumState;}
 	int GetNumAction() { return this->mNumAction;}
+	int GetNumFeature() { return this->mNumFeature;}
+	int GetNumPose() { return this->mNumPose;}
 
 	
 	void SetAction(const Eigen::VectorXd& action){ this->mActions = action; }
@@ -96,7 +99,7 @@ protected:
 	int mControlHz;
 	int mSimulationHz;
 
-	int mNumState, mNumAction,mNumFeature;
+	int mNumState, mNumAction,mNumFeature,mNumPose;
 	int mNumMotions;
 	Eigen::VectorXd mActions;
 	std::vector<double> mRewardParts;
@@ -157,6 +160,9 @@ protected:
 	int motion_it;
 	Eigen::VectorXd mCurrentFeature;
 	Eigen::VectorXd mPosePrev;
+
+	double target_speed;
+	Eigen::Vector3d target_pos;
 
 };
 }

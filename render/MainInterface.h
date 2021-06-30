@@ -27,7 +27,7 @@ class MainInterface : public GLUTWindow
 {
 public:
 	MainInterface();
-	MainInterface(std::string bvh, std::string ppo);
+	MainInterface(std::string bvh, std::string ppo,std::string amp);
 
 	void DrawGround();
 	void display();
@@ -42,9 +42,9 @@ public:
 	void SetFrame(int n);
 	void DrawSkeletons();
 
- 	void initNetworkSetting(std::string ppo);
+ 	void initNetworkSetting(std::string type, std::string ppo);
  	void UpdateMotion(std::vector<Eigen::VectorXd> motion, const char* type);
- 	void RunPPO();
+ 	void RunPPO(std::string type);
 
 	
 protected:
@@ -57,7 +57,7 @@ protected:
 	std::string character_path;
 
 	dart::dynamics::SkeletonPtr 	mSkel;
-	dart::dynamics::SkeletonPtr 	mSkel_reg;
+	dart::dynamics::SkeletonPtr 	mSkel_amp;
 	dart::dynamics::SkeletonPtr 	mSkel_sim;
 
 	int     drag_mouse_r;
@@ -69,7 +69,7 @@ protected:
 	std::vector<double>				mTiming; 
 	std::vector<Eigen::VectorXd> mMotion_bvh;
 	std::vector<Eigen::VectorXd> mMotion_sim;
-	std::vector<Eigen::VectorXd> mMotion_reg;
+	std::vector<Eigen::VectorXd> mMotion_amp;
 
 	int mx;
 	int my;
@@ -86,11 +86,13 @@ protected:
 
 	//p::object 						mRegression;
 	py::object 						mPPO;
+	py::object 						mAMP;
 
 
 
 	bool render_bvh=false;
 	bool render_sim=false;
+	bool render_amp=false;
 
 	
 	bool isRecord=false;

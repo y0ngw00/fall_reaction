@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import copy
 from utils import RunningMeanStd
+
 from IPython import embed
 import os
 def vector_to_str(vec):
@@ -28,6 +29,7 @@ class Monitor(object):
 		self.num_state = self.env.num_state
 		self.num_action = self.env.num_action
 		self.num_feature = self.env.num_feature
+		self.num_poses = self.env.num_poses
 		self.RMS = RunningMeanStd(shape=(self.num_state))	
 		self.plot = plot
 		self.directory = directory

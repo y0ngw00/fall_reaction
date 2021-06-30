@@ -13,6 +13,7 @@ ReferenceManager(Character* character)
 	this-> mBlendingInterval = 10;
 
 	this-> smooth_time = 10;
+	this->mFramePerMotion = 300;
 
 	
 	mMotions_raw.clear();
@@ -59,8 +60,9 @@ LoadMotionFromBVH(std::string filename)
 	this->mNumMotions=motion_list.size();
 	this->mMotionPhases.resize(mNumMotions);
 
+	int it=0;
 	for(auto p :motion_list){
-		int it=0;
+		
 		mMotions_raw.clear();
 		mMotions_phase.clear();
 
@@ -174,7 +176,7 @@ LoadMotionFromBVH(std::string filename)
 
 		mPhaseLength = mMotions_raw.size();
 		mTimeStep = bvh->GetTimestep();
-		mMotionPhases[it]=mPhaseLength;
+		this->mMotionPhases[it]=mPhaseLength;
 
 		for(int i = 0; i < mPhaseLength; i++) {
 			mMotions_phase.push_back(new Motion(mMotions_raw[i]));
@@ -186,12 +188,15 @@ LoadMotionFromBVH(std::string filename)
 		 }
 		 
 		delete bvh;
-		this->GenerateMotionsFromSinglePhase(1000, true, mMotions_phase, this->mMotions_container);
+		this->GenerateMotionsFromSinglePhase(this->mFramePerMotion, true, mMotions_phase, this->mMotions_container);
 		it++;
 	}
 	// SelectMotion();
 
 	this->GetExpertPose(mExpertPoses);
+
+	this->mNumFeature = mExpertPoses[0].size();
+	this->mNumPose = mExpertPoses.size();
 
 
 }
@@ -400,14 +405,12 @@ void
 ReferenceManager::
 GetExpertPose(std::vector<Eigen::VectorXd>& pose_container)
 {
-
 	// Current local rotation and local velocity
 	int mTotalMotions = GetNumMotions();
-
-	for(int motion_it=0;motion_it<mTotalMotions ;motion_it++){
+	for(int motion_it=0;motion_it<mTotalMotions;motion_it++){
 		SelectMotion(motion_it);
 		int totalframe = GetPhaseLength(motion_it);
-		for(int frame = 0; frame<totalframe; frame++){
+		for(int frame = 0; frame<this->mFramePerMotion; frame++){
 			Motion* p_v_target =GetMotion(frame);
 			int p_size = p_v_target->GetPosition().size();
 			Eigen::VectorXd p = p_v_target->GetPosition();
@@ -459,11 +462,9 @@ GetExpertPose(std::vector<Eigen::VectorXd>& pose_container)
 			pose<< p.tail(p_size-6), v, ee, p_next.tail(p_size-6), v_next, ee_next;
 
 			pose_container.push_back(pose);
+			//std::cout<<pose_container.size()<<std::endl;
 		}
 	}
-
-	this->mNumFeature = mExpertPoses[0].size();
-	this->mNumPose = mExpertPoses.size();
 
 	
 }
@@ -484,6 +485,23 @@ GetTimeStep(double t) {
 	// } else 
 		return 1.0;
 }
+void
+ReferenceManager::
+SetRandomTarget(const Eigen::Vector3d& root_pos){
+	double time_min = 1;
+	double time_max = 5;
+	this->mTargetSpeed = 1.0;
+
+	this->mMaxTargetDist = 3;
+	this->dist_threshold = 0.5;
+ 	
+ 	this->target_pos.setZero();
 
 
+	double dist = DPhy::doubleRand(0.0, mMaxTargetDist);
+	double theta = DPhy::doubleRand(0.0, 2 * M_PI);
+	this->target_pos[0] = root_pos[0] + dist * std::cos(theta);
+	this->target_pos[2] = root_pos[2] + dist * std::sin(theta);
+
+}
 }

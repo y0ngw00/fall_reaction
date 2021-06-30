@@ -4,13 +4,15 @@
 
 
 MainInterface::
-MainInterface(std::string bvh, std::string ppo):GLUTWindow()
+MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 {
 
 	this->character_path = std::string(PROJECT_DIR)+std::string("/character/") + std::string(REF_CHARACTER_TYPE) + std::string(".xml");
 
 	this->frame_no = 0;
-	
+	std::cout<<"BVH"<<bvh<<std::endl;
+	std::cout<<"PPO"<<ppo<<std::endl;
+	std::cout<<"AMP"<<amp<<std::endl;
 	mCamera = new Camera();
 
 	this->drag_mouse_r=0;
@@ -25,48 +27,58 @@ MainInterface(std::string bvh, std::string ppo):GLUTWindow()
 	this->speed_type=0;
 	this->motion_type=0;
 
+
 	DPhy::Character* ref = new DPhy::Character(character_path);
     mReferenceManager = new DPhy::ReferenceManager(ref);
-    mReferenceManager->LoadMotionFromBVH(std::string("/motion/") + bvh);
 
-    std::vector<Eigen::VectorXd> pos;
-	
-	phase = 0;
-
-    for(int i = 0; i < 1000; i++) {
-        Eigen::VectorXd p = mReferenceManager->GetPosition(phase);
-        pos.push_back(p);
-        phase += mReferenceManager->GetTimeStep(phase);
-    }
-    UpdateMotion(pos, "bvh");
 
 	this->mCurFrame = 0;
 	//this->mTotalFrame = mReferenceManager->GetPhaseLength();
 	this->mTotalFrame = 1000;
-
 	if(bvh!=""){
+
+	    mReferenceManager->LoadMotionFromBVH(std::string("/motion/") + bvh);
+
+	    std::vector<Eigen::VectorXd> pos;
+		
+		phase = 0;
+
+	    for(int i = 0; i < 1000; i++) {
+	        Eigen::VectorXd p = mReferenceManager->GetPosition(phase);
+	        p[3]-=1.5;
+	        pos.push_back(p);
+	        phase += mReferenceManager->GetTimeStep(phase);
+	    }
 		this->mSkel = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
 		DPhy::SetSkeletonColor(mSkel, Eigen::Vector4d(164./255., 235./255.,	243./255., 1.0));
 
 		this->render_bvh = true;
 
-	}
-	
+	    UpdateMotion(pos, "bvh");
 
+
+	}
 	if(ppo!=""){
 		
 		this->mSkel_sim = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
 
-		DPhy::SetSkeletonColor(mSkel, Eigen::Vector4d(164./255., 235./255.,	13./255., 1.0));
+		DPhy::SetSkeletonColor(mSkel_sim, Eigen::Vector4d(164./255., 235./255.,	13./255., 1.0));
 
-		initNetworkSetting(ppo);
+		initNetworkSetting("PPO",ppo);
 		this->render_sim=true;
 		
 	}
+	else if(amp!=""){
+		
+		this->mSkel_amp = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
 
+		DPhy::SetSkeletonColor(mSkel_amp, Eigen::Vector4d(38./255., 189./255.,	169./255., 1.0));
 
+		initNetworkSetting("AMP",amp);
+		this->render_amp=true;
+		
+	}
 	
-
 
 }
 
@@ -100,6 +112,8 @@ SetFrame(int n)
 		mSkel->setPositions(mMotion_bvh[n]);
 	if(render_sim) 
 		mSkel_sim->setPositions(mMotion_sim[n]);
+	if(render_amp) 
+		mSkel_amp->setPositions(mMotion_amp[n]);
 }
 
 void
@@ -112,6 +126,8 @@ DrawSkeletons()
 		GUI::DrawSkeleton(this->mSkel, 0);
 	if(render_sim)
 		GUI::DrawSkeleton(this->mSkel_sim, 0);
+	if(render_amp)
+		GUI::DrawSkeleton(this->mSkel_amp, 0);
 	glPopMatrix();
 }	
 
@@ -147,7 +163,7 @@ DrawGround()
 
 void
 MainInterface::
-initNetworkSetting(std::string ppo) {
+initNetworkSetting(std::string type, std::string net) {
 
     Py_Initialize();
     try {
@@ -162,8 +178,9 @@ initNetworkSetting(std::string ppo) {
 	 //        path = std::string(PROJECT_DIR)+ std::string("/network/output/") + DPhy::split(reg, '/')[0] + std::string("/");
 		// //	mRegressionMemory->SaveContinuousParamSpace(path + "param_cspace");
   //   	}
-    	if(ppo != "") {
+    	if(type.compare("PPO")==0) {
     		//if (reg!="") this->mController = new DPhy::Controller(mReferenceManager, true, true, true);
+
     		this->mController = new DPhy::Controller(mReferenceManager, this->character_path,true); //adaptive=true, bool parametric=true, bool record=true
 			//mController->SetGoalParameters(mReferenceManager->GetParamCur());
 
@@ -172,13 +189,43 @@ initNetworkSetting(std::string ppo) {
 			sys_module.attr("path").attr("insert")(1, module_dir);
 
     		py::object ppo_main = py::module::import("ppo");
+
 			this->mPPO = ppo_main.attr("PPO")();
-			std::string path = std::string(PROJECT_DIR)+ std::string("/network/output/") + ppo;
+
+
+			std::string path = std::string(PROJECT_DIR)+ std::string("/network/output/") + net;
+
 			this->mPPO.attr("initRun")(path,
 									   this->mController->GetNumState(), 
 									   this->mController->GetNumAction());
-			RunPPO();
+
+
+			RunPPO(type);
     	}
+    	else if(type.compare("AMP")==0) {
+    		//if (reg!="") this->mController = new DPhy::Controller(mReferenceManager, true, true, true);
+    		this->mController = new DPhy::Controller(mReferenceManager, this->character_path,true); //adaptive=true, bool parametric=true, bool record=true
+			//mController->SetGoalParameters(mReferenceManager->GetParamCur());
+
+			py::object sys_module = py::module::import("sys");
+			py::str module_dir = (std::string(PROJECT_DIR)+"/network").c_str();
+			sys_module.attr("path").attr("insert")(1, module_dir);
+
+    		py::object amp_main = py::module::import("amp");
+
+			this->mAMP = amp_main.attr("AMP")();
+
+			std::string path = std::string(PROJECT_DIR)+ std::string("/network/output/") + net;
+
+			this->mAMP.attr("initRun")(path,
+									   this->mController->GetNumState(), 
+									   this->mController->GetNumAction(), 
+									   this->mController->GetNumFeature(),
+									   this->mController->GetNumPose());
+
+			RunPPO(type);
+    	}
+
     
     } catch (const py::error_already_set&) {
         PyErr_Print();
@@ -186,50 +233,71 @@ initNetworkSetting(std::string ppo) {
 }
 void
 MainInterface::
-RunPPO() {
-	this->render_sim = true;
-	std::vector<Eigen::VectorXd> pos_bvh;
-	std::vector<Eigen::VectorXd> pos_reg;
+RunPPO(std::string type) {
 	std::vector<Eigen::VectorXd> pos_sim;
-	std::vector<Eigen::VectorXd> pos_obj;
+	std::vector<Eigen::VectorXd> pos_amp;
 
 	int count = 0;
 	mController->Reset(false);
 	this->mTiming= std::vector<double>();
 	this->mTiming.push_back(this->mController->GetCurrentLength());
 
-	while(!this->mController->IsTerminalState()) {
-		Eigen::VectorXd state = this->mController->GetState();
-		py::array_t<double> na = this->mPPO.attr("run")(DPhy::toNumPyArray(state));
-		Eigen::VectorXd action = DPhy::toEigenVector(na, this->mController->GetNumAction());
+	if(type.compare("PPO")==0){
+		while(!this->mController->IsTerminalState()) {
+			Eigen::VectorXd state = this->mController->GetState();
+			py::array_t<double> na = this->mPPO.attr("run")(DPhy::toNumPyArray(state));
+			Eigen::VectorXd action = DPhy::toEigenVector(na, this->mController->GetNumAction());
+			this->mController->SetAction(action);
+			this->mController->Step();
+			this->mTiming.push_back(this->mController->GetCurrentLength());
+			
+			count += 1;
+		}
 
-		this->mController->SetAction(action);
-		this->mController->Step();
-		this->mTiming.push_back(this->mController->GetCurrentLength());
-		
-		count += 1;
+		for(int i = 0; i <= count; i++) {
+
+			Eigen::VectorXd position = this->mController->GetPositions(i);
+			//Eigen::VectorXd position_reg = this->mController->GetTargetPositions(i);
+			// Eigen::VectorXd position_bvh = this->mController->GetBVHPositions(i);
+			// position_bvh[3]-=1.5;
+			// pos_bvh.push_back(position_bvh);
+
+			//Eigen::VectorXd position_obj = this->mController->GetObjPositions(i);
+
+			//pos_reg.push_back(position_reg);
+			pos_sim.push_back(position);
+			
+			
+		}
+		UpdateMotion(pos_sim, "sim");
 	}
 
-	for(int i = 0; i <= count; i++) {
+	else if(type.compare("AMP")==0){
+		while(!this->mController->IsTerminalState()) {
+			Eigen::VectorXd state = this->mController->GetState();
+			py::array_t<double> na = this->mAMP.attr("run")(DPhy::toNumPyArray(state));
+			Eigen::VectorXd action = DPhy::toEigenVector(na, this->mController->GetNumAction());
+			//for(int i=0;i<action.rows();i++)std::cout<<action[i]<<" ";
+			//std::cout<<std::endl;
 
-		Eigen::VectorXd position = this->mController->GetPositions(i);
-		//Eigen::VectorXd position_reg = this->mController->GetTargetPositions(i);
-		Eigen::VectorXd position_bvh = this->mController->GetBVHPositions(i);
-		position_bvh[3]-=1.5;
+			this->mController->SetAction(action);
+			this->mController->Step();
+			this->mTiming.push_back(this->mController->GetCurrentLength());
+			
+			count += 1;
+		}
 
-		//Eigen::VectorXd position_obj = this->mController->GetObjPositions(i);
+		for(int i = 0; i <= count; i++) {
 
-		//pos_reg.push_back(position_reg);
-		pos_sim.push_back(position);
-		pos_bvh.push_back(position_bvh);
-		
+			Eigen::VectorXd position = this->mController->GetPositions(i);
+			pos_amp.push_back(position);
+			
+			
+		}
+		UpdateMotion(pos_amp, "amp");
 	}
-	// Eigen::VectorXd root_bvh = mReferenceManager->GetPosition(0, false);
-	// pos_sim =  DPhy::Align(pos_sim, root_bvh);
-	// pos_reg =  DPhy::Align(pos_reg, root_bvh);
-	UpdateMotion(pos_bvh, "bvh");
-	UpdateMotion(pos_sim, "sim");
-	//UpdateMotion(pos_reg, "reg");
+
+
 
 }
 void 
@@ -242,8 +310,8 @@ UpdateMotion(std::vector<Eigen::VectorXd> motion, const char* type)
 	else if(!strcmp(type,"sim")) {
 		mMotion_sim = motion;		
 	}
-	else if(!strcmp(type,"reg")) {
-		mMotion_reg = motion;	
+	else if(!strcmp(type,"amp")) {
+		mMotion_amp = motion;	
 	}
 	// else if(type == 3) {
 	// 	mMotion_exp = motion;	

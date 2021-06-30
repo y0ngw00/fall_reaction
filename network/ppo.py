@@ -40,12 +40,13 @@ class AMP(object):
 		self.lambd = lambd
 		self.reward_max = 0
 
-	def initRun(self, pretrain, num_state, num_action, num_slaves=1):
+	def initRun(self, pretrain, num_state,num_slaves=1):
 		self.pretrain = pretrain
 
 		self.num_slaves = num_slaves
 		self.num_action = num_action
 		self.num_state = num_state
+
 
 		config = tf.ConfigProto()
 		config.intra_op_parallelism_threads = self.num_slaves

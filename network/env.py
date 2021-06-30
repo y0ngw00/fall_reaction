@@ -12,6 +12,7 @@ class Env(object):
 		self.num_action = self.sim_env.GetNumAction()
 		self.num_feature = self.sim_env.GetNumFeature()
 		self.expert_poses = self.sim_env.GetExpertPoses()
+		self.num_poses = self.sim_env.GetNumPose()
 
 	def reset(self, i, b):
 		self.sim_env.Reset(i, b)
