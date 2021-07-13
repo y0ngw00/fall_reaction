@@ -11,7 +11,6 @@ class Env(object):
 		self.num_state = self.sim_env.GetNumState()
 		self.num_action = self.sim_env.GetNumAction()
 		self.num_feature = self.sim_env.GetNumFeature()
-		self.expert_poses = self.sim_env.GetExpertPoses()
 		self.num_poses = self.sim_env.GetNumPose()
 
 	def reset(self, i, b):
@@ -37,6 +36,7 @@ class Env(object):
 
 		self.sim_env.SetActions(actions)
 		self.sim_env.Steps()
+
 		for j in range(self.num_slaves):
 			is_terminal, nan_occur, start, frame_elapsed, time_elapsed, t = self.sim_env.IsNanAtTerminal(j)
 			if not nan_occur:
@@ -56,5 +56,7 @@ class Env(object):
 
 				nan_count += 1
 		states = self.sim_env.GetStates()
-		features = self.sim_env.GetAgentPoses()
-		return states, rewards, features, dones, times, frames, terminal_reason, nan_count 
+
+		agent_feature = self.sim_env.GetAgentFeatures()
+		expert_feature = self.sim_env.GetExpertFeatures()
+		return agent_feature,expert_feature,states, rewards, dones, times, frames, terminal_reason, nan_count 

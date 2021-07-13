@@ -40,6 +40,7 @@ public:
 	void Reset();
 
 	void SetFrame(int n);
+	void DrawStrings();
 	void DrawSkeletons();
 
  	void initNetworkSetting(std::string type, std::string ppo);

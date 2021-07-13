@@ -64,10 +64,7 @@ public:
 	void ResetOptimizationParameters(bool reset_displacement=true);
 	void setRecord(){mRecord = true;}
 
-	void GetExpertPose(std::vector<Eigen::VectorXd>& pose_container);
-	int GetNumFeature() { return this->mNumFeature;}
 	int GetNumPose() { return this->mNumPose;}
-	std::vector<Eigen::VectorXd> GetExpertPoseContainer() {return this->mExpertPoses;}
 	void SetRandomTarget(const Eigen::Vector3d& root_pos);
 
 	Eigen::Vector3d GetTargetPosition(){return this->target_pos;}
@@ -112,9 +109,8 @@ protected:
 	std::vector<Motion*> mMotions_gen_adaptive;
 
 
-	int mNumPose,mNumFeature;
+	int mNumPose;
 	int motion_it;
-	std::vector<Eigen::VectorXd> mExpertPoses;
 	std::vector<std::string> mEndEffectors;
 
 	Eigen::Vector3d target_pos;

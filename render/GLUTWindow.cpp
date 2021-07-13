@@ -1,7 +1,6 @@
 
 #include "GLUTWindow.h"
 #include <iostream>
-#include <GL/glut.h>
 
 std::vector<GLUTWindow*> GLUTWindow::mWindows;
 std::vector<int> GLUTWindow::mWinIDs;
@@ -22,12 +21,20 @@ void
 GLUTWindow::
 GLInitWindow(const char* _name)
 {
+
 	mWindows.push_back(this);
 	glutInitDisplayMode(GLUT_DEPTH |GLUT_DOUBLE | GLUT_RGBA | GLUT_STENCIL);
 	//glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_MULTISAMPLE | GLUT_ACCUM);
-	glutInitWindowSize(640, 640);
+	glutInitWindowSize(1920, 1080);
 	glutInitWindowPosition(0, 0);
 	mWinIDs.push_back(glutCreateWindow("Forward and Inverse Kinematics"));
+
+	GLenum err=glewInit();
+	if(err!=GLEW_OK) {
+	// Problem: glewInit failed, something is seriously wrong.
+		std::cout << "glewInit failed: " << glewGetErrorString(err) << std::endl;
+		exit(1);
+	}
 	glutDisplayFunc(DisplayEvent);
 	glutReshapeFunc(ReshapeEvent);
 	glutKeyboardFunc(KeyboardEvent);

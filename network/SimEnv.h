@@ -32,7 +32,8 @@ public:
 	py::tuple IsNanAtTerminal(int id);
 
 	py::array_t<double> GetState(int id);
-	py::array_t<double> GetFeature(int id);
+	py::array_t<double> GetExpertFeatures();
+	py::array_t<double> GetAgentFeatures();
 	void SetAction(py::array_t<double> np_array,int id);
 	double GetReward(int id);
 	py::array_t<double> GetRewardByParts(int id);
@@ -42,8 +43,6 @@ public:
 	void Resets(bool RSI);
 	py::array_t<double> GetStates();
 
-	py::array_t<double> GetExpertPoses();
-	py::array_t<double> GetAgentPoses();
 	void SetActions(py::array_t<double> np_array);
 	py::list GetRewardLabels();
 	py::array_t<double> GetRewards();

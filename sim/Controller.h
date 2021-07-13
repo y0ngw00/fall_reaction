@@ -26,6 +26,10 @@ public:
 
 	void Step();
 
+	Eigen::Isometry3d getReferenceTransform();
+	Eigen::Vector3d projectOnVector(const Eigen::Vector3d& u, const Eigen::Vector3d& v);
+	Eigen::VectorXd actuate(const Eigen::VectorXd& target_pos);
+
 	const dart::simulation::WorldPtr& GetWorld() {return mWorld;}
 	const dart::dynamics::SkeletonPtr& GetSkeleton() {return this->mCharacter->GetSkeleton();}
 
@@ -36,12 +40,17 @@ public:
 	void UpdateReward();
 	double GetReward() {return mRewardParts[0]; }
 	std::vector<std::string> GetRewardLabels() {return mRewardLabels; }
-
-	Eigen::VectorXd GetEndEffectorStatePosAndVel(const Eigen::VectorXd& pos, const Eigen::VectorXd& vel);
 	
 	Eigen::VectorXd GetState();
-	void MakeFeature();
-	Eigen::VectorXd GetFeaturePair(){return this->mCurrentFeature;}
+	Eigen::VectorXd RecordPose();
+	Eigen::VectorXd RecordVel();
+	void RecordAgentFeatureSet();
+	void RecordExpertFeatureSet();
+	Eigen::VectorXd GetAgentFeature(){return this->mAgentFeatureSet;}
+	Eigen::VectorXd GetExpertFeature(){return this->mExpertFeatureSet;}
+	
+	//void MakeFeature(const Eigen::VectorXd& state);
+	//Eigen::VectorXd GetFeaturePair(){return this->mCurrentFeature;}
 
 	bool CheckCollisionWithGround(std::string bodyName);
 
@@ -61,7 +70,6 @@ public:
 	int GetNumFeature() { return this->mNumFeature;}
 	int GetNumPose() { return this->mNumPose;}
 
-	
 	void SetAction(const Eigen::VectorXd& action){ this->mActions = action; }
 
 	double GetTimeElapsed(){return this->mTimeElapsed;}
@@ -158,8 +166,14 @@ protected:
 	Eigen::Vector3d mStartFoot; //middle of two feet at 0th frame
 
 	int motion_it;
-	Eigen::VectorXd mCurrentFeature;
-	Eigen::VectorXd mPosePrev;
+	
+	Eigen::VectorXd mPrevAgentPose;
+	Eigen::VectorXd mPrevAgentVel;
+	Eigen::VectorXd mPrevExpertPose;
+	Eigen::VectorXd mPrevExpertVel;
+	Eigen::VectorXd mAgentFeatureSet;
+	Eigen::VectorXd mExpertFeatureSet;
+
 
 	double target_speed;
 	Eigen::Vector3d target_pos;

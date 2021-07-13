@@ -61,6 +61,7 @@ LoadMotionFromBVH(std::string filename)
 	this->mMotionPhases.resize(mNumMotions);
 
 	int it=0;
+	int num_pose =0;
 	for(auto p :motion_list){
 		
 		mMotions_raw.clear();
@@ -84,6 +85,7 @@ LoadMotionFromBVH(std::string filename)
 
 
 		double t = 0;
+		num_pose += bvh->GetNumFrames();
 		for(int i = 0; i < bvh->GetNumFrames(); i++)
 		{
 			Eigen::VectorXd pos = Eigen::VectorXd::Zero(dof);
@@ -191,12 +193,9 @@ LoadMotionFromBVH(std::string filename)
 		this->GenerateMotionsFromSinglePhase(this->mFramePerMotion, true, mMotions_phase, this->mMotions_container);
 		it++;
 	}
-	// SelectMotion();
+	SelectMotion(0);
 
-	this->GetExpertPose(mExpertPoses);
-
-	this->mNumFeature = mExpertPoses[0].size();
-	this->mNumPose = mExpertPoses.size();
+	this->mNumPose = num_pose;
 
 
 }
@@ -401,73 +400,6 @@ GetContacts(double t)
 	return result;
 }
 
-void 
-ReferenceManager::
-GetExpertPose(std::vector<Eigen::VectorXd>& pose_container)
-{
-	// Current local rotation and local velocity
-	int mTotalMotions = GetNumMotions();
-	for(int motion_it=0;motion_it<mTotalMotions;motion_it++){
-		SelectMotion(motion_it);
-		int totalframe = GetPhaseLength(motion_it);
-		for(int frame = 0; frame<this->mFramePerMotion; frame++){
-			Motion* p_v_target =GetMotion(frame);
-			int p_size = p_v_target->GetPosition().size();
-			Eigen::VectorXd p = p_v_target->GetPosition();
-			Eigen::VectorXd v = p_v_target->GetVelocity();
-			delete p_v_target;
-
-			// next local rotation and local velocity
-			p_v_target = GetMotion(frame+1);
-			Eigen::VectorXd p_next = p_v_target->GetPosition();
-			Eigen::VectorXd v_next = p_v_target->GetVelocity();
-			delete p_v_target;
-
-			auto& skel = mCharacter->GetSkeleton();
-			dart::dynamics::BodyNode* root = skel->getRootBodyNode();
-			Eigen::VectorXd p_save = skel->getPositions();
-			Eigen::VectorXd v_save = skel->getVelocities();
-
-			// current 3D position of end-effectors represented in the character's local frame
-			skel->setPositions(p);
-			skel->setVelocities(v);
-
-			Eigen::VectorXd ee;
-			ee.resize(mEndEffectors.size()*3);
-			Eigen::Isometry3d cur_root_inv = root->getWorldTransform().inverse();
-			for(int i=0;i<mEndEffectors.size();i++)
-			{		
-				Eigen::Isometry3d transform = cur_root_inv * skel->getBodyNode(mEndEffectors[i])->getWorldTransform();
-				ee.segment<3>(3*i) << transform.translation();
-			}
-
-			// next 3D position of end-effectors represented in the character's local frame
-			skel->setPositions(p_next);
-			skel->setVelocities(v_next);
-
-			cur_root_inv = root->getWorldTransform().inverse();
-			Eigen::VectorXd ee_next;
-			ee_next.resize(mEndEffectors.size()*3);
-			for(int i=0;i<mEndEffectors.size();i++)
-			{		
-				Eigen::Isometry3d transform = cur_root_inv * skel->getBodyNode(mEndEffectors[i])->getWorldTransform();
-				ee_next.segment<3>(3*i) << transform.translation();
-			}
-
-			skel->setPositions(p_save);
-			skel->setVelocities(v_save);
-
-			Eigen::VectorXd pose;
-			pose.resize((p.rows()-6 +v.rows()+ee.rows()) * 2 );
-			pose<< p.tail(p_size-6), v, ee, p_next.tail(p_size-6), v_next, ee_next;
-
-			pose_container.push_back(pose);
-			//std::cout<<pose_container.size()<<std::endl;
-		}
-	}
-
-	
-}
 double 
 ReferenceManager::
 GetTimeStep(double t) {

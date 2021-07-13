@@ -1,6 +1,7 @@
 
 #include <GL/glew.h>
 #include <GL/glut.h>
+#include <GL/gl.h>
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <Eigen/Geometry>

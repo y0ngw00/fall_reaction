@@ -10,9 +10,6 @@ MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 	this->character_path = std::string(PROJECT_DIR)+std::string("/character/") + std::string(REF_CHARACTER_TYPE) + std::string(".xml");
 
 	this->frame_no = 0;
-	std::cout<<"BVH"<<bvh<<std::endl;
-	std::cout<<"PPO"<<ppo<<std::endl;
-	std::cout<<"AMP"<<amp<<std::endl;
 	mCamera = new Camera();
 
 	this->drag_mouse_r=0;
@@ -35,6 +32,8 @@ MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 	this->mCurFrame = 0;
 	//this->mTotalFrame = mReferenceManager->GetPhaseLength();
 	this->mTotalFrame = 1000;
+	std::cout<<0<<std::endl;
+
 	if(bvh!=""){
 
 	    mReferenceManager->LoadMotionFromBVH(std::string("/motion/") + bvh);
@@ -58,12 +57,12 @@ MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 
 
 	}
+	std::cout<<1<<std::endl;
 	if(ppo!=""){
 		
 		this->mSkel_sim = DPhy::SkeletonBuilder::BuildFromFile(character_path).first;
 
 		DPhy::SetSkeletonColor(mSkel_sim, Eigen::Vector4d(164./255., 235./255.,	13./255., 1.0));
-
 		initNetworkSetting("PPO",ppo);
 		this->render_sim=true;
 		
@@ -94,7 +93,7 @@ display()
 	mCamera->viewupdate();
 
 	DrawGround();
-
+	DrawStrings();
 	DrawSkeletons();
 	glutSwapBuffers();
 
@@ -102,7 +101,7 @@ display()
 	if(this->isRecord)
 		ogrCapture();
 
-	//GUI::DrawStringOnScreen(0.8, 0.9, std::to_string(mCurFrame), true, Eigen::Vector3d::Zero());
+	
 }
 void
 MainInterface::
@@ -114,6 +113,29 @@ SetFrame(int n)
 		mSkel_sim->setPositions(mMotion_sim[n]);
 	if(render_amp) 
 		mSkel_amp->setPositions(mMotion_amp[n]);
+}
+void
+MainInterface::
+DrawStrings()
+{
+	std::vector<std::string> str_list;
+	std::string frame = "Frame : " + std::to_string(this->mCurFrame);
+	std::string reset = "Reset : R" ;
+	std::string stop = "Stop : space" ;
+	std::string prev = "Prev : Q" ;
+	std::string next = "Next : P" ;
+	std::string record = "Record : V" ;
+
+	str_list.push_back(frame);
+	str_list.push_back(reset);
+	str_list.push_back(stop);
+	str_list.push_back(prev);
+	str_list.push_back(next);
+	str_list.push_back(record);
+	for(int i=0;i<str_list.size(); i++){
+		GUI::DrawStringOnScreen(0.8, 0.9-0.025*i, str_list[i], true, Eigen::Vector3d::Zero());
+	}
+	
 }
 
 void
@@ -180,25 +202,25 @@ initNetworkSetting(std::string type, std::string net) {
   //   	}
     	if(type.compare("PPO")==0) {
     		//if (reg!="") this->mController = new DPhy::Controller(mReferenceManager, true, true, true);
-
     		this->mController = new DPhy::Controller(mReferenceManager, this->character_path,true); //adaptive=true, bool parametric=true, bool record=true
 			//mController->SetGoalParameters(mReferenceManager->GetParamCur());
-
 			py::object sys_module = py::module::import("sys");
 			py::str module_dir = (std::string(PROJECT_DIR)+"/network").c_str();
+			
 			sys_module.attr("path").attr("insert")(1, module_dir);
+			std::cout<<7<<std::endl;
 
     		py::object ppo_main = py::module::import("ppo");
+			std::cout<<8<<std::endl;
 
 			this->mPPO = ppo_main.attr("PPO")();
 
-
 			std::string path = std::string(PROJECT_DIR)+ std::string("/network/output/") + net;
-
+			std::cout<<9<<std::endl;
 			this->mPPO.attr("initRun")(path,
 									   this->mController->GetNumState(), 
 									   this->mController->GetNumAction());
-
+			std::cout<<10<<std::endl;
 
 			RunPPO(type);
     	}
@@ -419,6 +441,7 @@ keyboard(unsigned char key, int mx, int my)
 		if(!this->isRecord){
 			std::cout<<"Recording Starts"<<std::endl;
         	this->isRecord = true;
+        	glRecordInitialize();
         	ogrPrepareCapture();
         }
         else if(this->isRecord){
@@ -427,6 +450,18 @@ keyboard(unsigned char key, int mx, int my)
         	ogrStopCapture();
         }
     }
+
+    if (key == 'q'){
+    	if(mCurFrame>0) 
+			this->mCurFrame--;
+		else
+			this->mCurFrame=0;
+    }
+	if (key == 'p')
+    	if(mCurFrame<mTotalFrame-1) 
+			this->mCurFrame++;
+		else
+			this->mCurFrame=mTotalFrame-1;
 	if (key == 's') 
 		glRecordInitialize();	
 	// // change animation mode

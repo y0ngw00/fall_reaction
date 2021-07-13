@@ -45,6 +45,7 @@ class RunningMeanStd(object):
             self.mean, self.var, self.count, batch_mean, batch_var, batch_count)
 
         if np.isnan(np.sum(mean)) or np.isnan(np.sum(var)) or np.isnan(np.sum(count)):
+            print("Nan occur")
             embed()
         else:
             self.mean = mean
@@ -79,6 +80,82 @@ class RunningMeanStd(object):
             self.var = np.concatenate((self.var, v_new), axis=0)
             print("new RMS state size: ", self.mean.shape)
 
+
+class ReplayBuffer(object):
+    def __init__(self, buffer_size):
+        self.buffer_size = buffer_size
+        self.curr_size = 0
+        self.total_count = 0
+        self.buffer = None
+
+
+    def getRandIndex(self,n):
+        idx = np.random.randint(0, self.curr_size, size=n)
+        return idx
+
+    def getSample(self, idx):
+        return self.buffer[idx]
+
+    def init_buffer(self, data):
+        dtype = data[0].dtype
+        shape = [self.buffer_size] + list(data[0].shape)
+        self.buffer = np.zeros(shape, dtype=dtype)
+        # self.RMS = RunningMeanStd(shape=list(data[0].shape))
+
+
+        # if self.saved_path is not None :
+        #     self.RMS.load(self.save_path)
+        #     self.RMS.setNumStates(list(data[0].shape))
+        return
+
+    def clear(self):
+        self.curr_size = 0
+        self.total_count = 0
+
+    def store(self, data):
+        n = len(data)
+
+        if (n > 0):
+            if self.buffer is None:
+                self.init_buffer(data)
+            # data_normalized = self.RMS.apply(np.array(data))
+            idx = self.getStore_idx(n)
+            self.buffer[idx] = data
+            self.curr_size = min(self.curr_size + n, self.buffer_size)
+            self.total_count += n
+        return
+
+    def get_current_size(self):
+        return self.curr_size
+
+    def is_full(self):
+        return self.curr_size >= self.buffer_size
+
+    # def saveRMS(self,path):
+    #     self.RMS.save(path)
+    #     return
+
+    # def loadRMS(self,path):
+    #     self.saved_path=path
+    #     return
+
+    def getStore_idx(self, n):
+        assert n < self.buffer_size # bad things can happen if path is too long
+        
+        idx = []
+        if (not self.is_full()):
+            start_idx = self.curr_size
+            end_idx = min(self.buffer_size, start_idx + n)
+            idx = list(range(start_idx, end_idx))
+
+        remainder = n - len(idx)
+        if (remainder > 0):
+            rand_idx = list(np.random.choice(self.curr_size, remainder, replace=False))
+            idx += rand_idx
+
+        return idx
+
+        
 
 def update_mean_var_count_from_moments(mean, var, count, batch_mean, batch_var, batch_count):
     delta = batch_mean - mean

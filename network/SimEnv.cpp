@@ -27,7 +27,7 @@ SimEnv(int num_slaves, std::string ref, std::string training_path)
 	}
 	this->mNumState = mSlaves[0]->GetNumState();
 	this->mNumAction = mSlaves[0]->GetNumAction();
-	this->mNumFeature = mReferenceManager->GetNumFeature();
+	this->mNumFeature = mSlaves[0]->GetNumFeature();
 	this->mNumPose = mReferenceManager->GetNumPose();
 
 }
@@ -66,12 +66,7 @@ GetState(int id)
 {
 	return DPhy::toNumPyArray(mSlaves[id]->GetState());
 }
-py::array_t<double>
-SimEnv::
-GetFeature(int id)
-{
-	return DPhy::toNumPyArray(mSlaves[id]->GetFeaturePair());
-}
+
 void 
 SimEnv::
 SetAction(py::array_t<double> np_array,int id)
@@ -142,22 +137,26 @@ GetStates()
 
 py::array_t<double>
 SimEnv::
-GetExpertPoses()
+GetExpertFeatures()
 {
-	std::vector<Eigen::VectorXd> poses = mReferenceManager->GetExpertPoseContainer();
+	Eigen::MatrixXd poses(mNumSlaves,mNumFeature);
+	for (int id = 0; id < mNumSlaves; ++id)
+	{
+		poses.row(id) = mSlaves[id]->GetExpertFeature().transpose();
+	}
 	return DPhy::toNumPyArray(poses);
 }
 py::array_t<double>
 SimEnv::
-GetAgentPoses()
+GetAgentFeatures()
 {
-	Eigen::MatrixXd states(mNumSlaves,mNumFeature);
+	Eigen::MatrixXd poses(mNumSlaves,mNumFeature);
 
 	for (int id = 0; id < mNumSlaves; ++id)
 	{
-		states.row(id) = mSlaves[id]->GetFeaturePair().transpose();
+		poses.row(id) = mSlaves[id]->GetAgentFeature().transpose();
 	}
-	return DPhy::toNumPyArray(states);
+	return DPhy::toNumPyArray(poses);
 }
 
 void
@@ -210,7 +209,8 @@ PYBIND11_MODULE(SimEnv, m)
 		.def("Step",&SimEnv::Step)
 		.def("Reset",&SimEnv::Reset)
 		.def("GetState",&SimEnv::GetState)
-		.def("GetFeature",&SimEnv::GetFeature)
+		.def("GetExpertFeatures",&SimEnv::GetExpertFeatures)
+		.def("GetAgentFeatures",&SimEnv::GetAgentFeatures)
 		.def("SetAction",&SimEnv::SetAction)
 		.def("GetRewardLabels",&SimEnv::GetRewardLabels)
 		.def("GetReward",&SimEnv::GetReward)
@@ -219,8 +219,6 @@ PYBIND11_MODULE(SimEnv, m)
 		.def("Resets",&SimEnv::Resets)
 		.def("IsNanAtTerminal",&SimEnv::IsNanAtTerminal)
 		.def("GetStates",&SimEnv::GetStates)
-		.def("GetExpertPoses",&SimEnv::GetExpertPoses)
-		.def("GetAgentPoses",&SimEnv::GetAgentPoses)
 		.def("SetActions",&SimEnv::SetActions)
 		.def("GetRewards",&SimEnv::GetRewards)
 		.def("GetRewardsByParts",&SimEnv::GetRewardsByParts)

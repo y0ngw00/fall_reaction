@@ -838,7 +838,7 @@ DrawStringOnScreen(float _x, float _y, const std::string& _s,bool _bigFont,const
     unsigned int length = _s.length();
     for (unsigned int c = 0; c < length; c++) {
     if (_bigFont)
-      glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, _s.at(c) );
+      glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, _s.at(c) );
     else
       glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, _s.at(c) );
     }  

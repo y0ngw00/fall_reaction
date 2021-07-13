@@ -30,7 +30,8 @@ class Monitor(object):
 		self.num_action = self.env.num_action
 		self.num_feature = self.env.num_feature
 		self.num_poses = self.env.num_poses
-		self.RMS = RunningMeanStd(shape=(self.num_state))	
+		self.RMS = RunningMeanStd(shape=(self.num_state))
+		self.RMS_disc = RunningMeanStd(shape=(self.num_feature))	
 		self.plot = plot
 		self.directory = directory
 
@@ -53,8 +54,8 @@ class Monitor(object):
 
 		self.terminated = [False]*self.num_slaves
 		self.states = [0]*self.num_slaves
-		self.features = [0]*self.num_feature
-		self.ExpertFeatures = self.env.expert_poses
+		self.agent_feature = [0]*self.num_feature
+		self.expert_feature = [0]*self.num_feature
 		self.prevframes = [0]*self.num_slaves
 
 		
@@ -69,11 +70,11 @@ class Monitor(object):
 	def getStates(self):
 		return np.array(self.states).astype('float32') 
 
-	def getFeatures(self):
-		return np.array(self.features).astype('float32')
+	def getAgentFeatures(self):
+		return np.array(self.agent_feature).astype('float32')
 
 	def getExpertFeatures(self):
-		return np.array(self.ExpertFeatures).astype('float32') 
+		return np.array(self.expert_feature).astype('float32') 
 
 	def setTerminated(self, idx):
 		self.terminated[idx] = True
@@ -96,13 +97,14 @@ class Monitor(object):
 		self.prevframes[i] = 0
 
 	def step(self, actions, record=True):
-		self.states, rewards, self.features, dones, times, frames, terminal_reason, nan_count =  self.env.step(actions)
+		self.agent_feature, self.expert_feature, self.states, rewards, dones, times, frames, terminal_reason, nan_count =  self.env.step(actions)
 
 		params = np.zeros(self.num_slaves)
-		curframes = np.array(self.states)[:,-1]
-
 		states_updated = self.RMS.apply(self.states[~np.array(self.terminated)])
 		self.states[~np.array(self.terminated)] = states_updated
+
+		self.expert_feature = self.RMS_disc.apply(self.expert_feature)
+		self.agent_feature = self.RMS_disc.apply(self.agent_feature)
 		if record:
 			self.num_nan_per_iteration += nan_count
 			for i in range(self.num_slaves):
@@ -118,11 +120,10 @@ class Monitor(object):
 
 						if frames[i] > self.max_episode_length:
 							self.max_episode_length = frames[i]
-			self.prevframes = curframes
 
 		rewards = [rewards[i][0] for i in range(len(rewards))]
 				
-		return rewards, dones, curframes, params
+		return rewards, dones, params
 
 
 	def plotFig(self, y_list, title, num_fig=1, ylim=True, path=None):
@@ -166,13 +167,13 @@ class Monitor(object):
 			print_list.append('Num eval : {}'.format(self.num_evaluation))
 			print_list.append('total episode count : {}'.format(self.num_episodes))
 			print_list.append('total transition count : {}'.format(self.num_transitions))
-			t_per_e = 0
-			if self.num_episodes is not 0:
-				t_per_e = self.num_transitions / self.num_episodes
+			# t_per_e = 0
+			# if self.num_episodes is not 0:
+			# 	t_per_e = self.num_transitions / self.num_episodes
 
-			print_list.append('total transition per episodes : {:.2f}'.format(t_per_e))
+			# print_list.append('total transition per episodes : {:.2f}'.format(t_per_e))
 
-			print_list.append('episode count : {}'.format(self.num_episodes_per_iteration))
+			# print_list.append('episode count : {}'.format(self.num_episodes_per_iteration))
 			print_list.append('transition count : {}'.format(self.num_transitions_per_iteration))
 			
 			t_per_e = 0

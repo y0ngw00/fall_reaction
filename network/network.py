@@ -1,10 +1,10 @@
 import tensorflow as tf
 import numpy as np
-
+from IPython import embed
 activ = tf.nn.relu
 kernel_initialize_func = tf.contrib.layers.xavier_initializer()
-actor_layer_size = 512
-critic_layer_size = 512
+actor_layer_size = 256
+critic_layer_size = 256
 discriminator_layer_size = 256
 initial_state_layer_size = 512
 l2_regularizer_scale = 0.0
@@ -17,6 +17,7 @@ class Actor(object):
 		self.scope = scope + '_Actor'
 
 		self.mean, self.logstd, self.std = self.createNetwork(state, num_actions, False, None)
+
 		self.policy = self.mean + self.std * tf.random_normal(tf.shape(self.mean))
 		self.neglogprob = self.neglogp(self.policy)
 
@@ -49,9 +50,11 @@ class Actor(object):
 	            kernel_initializer=kernel_initialize_func,
 	            kernel_regularizer=regularizer
 			)
+			# logstd = tf.Variable(initial_value = np.zeros(num_actions), name='_logstd', dtype=tf.float32, trainable=True)
 			self.logstdvar = logstd = tf.get_variable(name='std', 
-				shape=[num_actions], initializer=tf.constant_initializer(0)
+				shape=[num_actions], initializer=tf.constant_initializer(-2.3)
 			)
+
 			sigma = tf.exp(logstd)
 
 			return mean, logstd, sigma
