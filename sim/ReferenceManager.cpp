@@ -13,13 +13,15 @@ ReferenceManager(Character* character)
 	this-> mBlendingInterval = 10;
 
 	this-> smooth_time = 10;
-	this->mFramePerMotion = 300;
+	this->mFramePerMotion = 400;
 
 	
 	mMotions_raw.clear();
 	mMotions_gen.clear();
 	mMotions_phase.clear();
 	mMotions_container.clear();
+
+	motion_list.clear();
 				
 
 	contact.clear();
@@ -37,6 +39,13 @@ ReferenceManager(Character* character)
 
 }
 
+int
+ReferenceManager::
+GetMotionIndex(std::string motion_name){
+	int it = std::find(this->motion_list.begin(), this->motion_list.end(), motion_name) - this->motion_list.begin();
+	return it;
+}
+
 void
 ReferenceManager::
 LoadMotionFromBVH(std::string filename)
@@ -45,7 +54,7 @@ LoadMotionFromBVH(std::string filename)
 	mMotions_gen.clear();
 	mMotions_container.clear();
 	std::string txt_path = std::string(PROJECT_DIR) + filename;
-	std::vector<std::string> motion_list;
+	
 	char buffer[100];
 
 	std::ifstream txtread;
@@ -417,23 +426,5 @@ GetTimeStep(double t) {
 	// } else 
 		return 1.0;
 }
-void
-ReferenceManager::
-SetRandomTarget(const Eigen::Vector3d& root_pos){
-	double time_min = 1;
-	double time_max = 5;
-	this->mTargetSpeed = 1.0;
 
-	this->mMaxTargetDist = 3;
-	this->dist_threshold = 0.5;
- 	
- 	this->target_pos.setZero();
-
-
-	double dist = DPhy::doubleRand(0.0, mMaxTargetDist);
-	double theta = DPhy::doubleRand(0.0, 2 * M_PI);
-	this->target_pos[0] = root_pos[0] + dist * std::cos(theta);
-	this->target_pos[2] = root_pos[2] + dist * std::sin(theta);
-
-}
 }

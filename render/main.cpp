@@ -24,11 +24,12 @@ int main(int argc, char ** argv)
     {"bvh", required_argument,        0, '1'},
     {"ppo", required_argument,        0, '2'},
     {"amp", required_argument,        0, '3'},
+
     }; 
   	int option_index = 0;
   	while (1)
     {
-  		auto c = getopt_long (argc, argv, "1:23::",
+  		auto c = getopt_long (argc, argv, "1:234:::",
                        long_options, &option_index);
       	if (c == -1)
         	break;
@@ -44,7 +45,7 @@ int main(int argc, char ** argv)
 	           case '2':
 	              ppo = optarg;
 
-              case '3':
+            case '3':
                 amp = optarg;
 	   			  break; 
        	}

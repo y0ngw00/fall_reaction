@@ -6,7 +6,7 @@
 MainInterface::
 MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 {
-
+	std::srand(std::time(0));
 	this->character_path = std::string(PROJECT_DIR)+std::string("/character/") + std::string(REF_CHARACTER_TYPE) + std::string(".xml");
 
 	this->frame_no = 0;
@@ -22,7 +22,6 @@ MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 	this->on_animation= false;
 
 	this->speed_type=0;
-	this->motion_type=0;
 
 
 	DPhy::Character* ref = new DPhy::Character(character_path);
@@ -31,18 +30,23 @@ MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 
 	this->mCurFrame = 0;
 	//this->mTotalFrame = mReferenceManager->GetPhaseLength();
-	this->mTotalFrame = 1000;
-	std::cout<<0<<std::endl;
+	this->mTotalFrame = 0;
 
 	if(bvh!=""){
-
+		int motion_it=0;
 	    mReferenceManager->LoadMotionFromBVH(std::string("/motion/") + bvh);
+	    int mNumMotions = mReferenceManager->GetNumMotions();
+    	motion_it = std::rand()%mNumMotions;
+	    std::cout<<"Total number of motions : "<<mNumMotions<<std::endl;
+	    std::cout<<"The motion ID is : "<<motion_it<<std::endl;
+		mReferenceManager->SelectMotion(motion_it);
 
 	    std::vector<Eigen::VectorXd> pos;
 		
 		phase = 0;
+		int totalFrame_bvh = mReferenceManager->GetTotalFrameperMotion();
 
-	    for(int i = 0; i < 1000; i++) {
+	    for(int i = 0; i < totalFrame_bvh; i++) {
 	        Eigen::VectorXd p = mReferenceManager->GetPosition(phase);
 	        p[3]-=1.5;
 	        pos.push_back(p);
@@ -52,10 +56,9 @@ MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 		DPhy::SetSkeletonColor(mSkel, Eigen::Vector4d(164./255., 235./255.,	243./255., 1.0));
 
 		this->render_bvh = true;
+		this->play_bvh = true;
 
 	    UpdateMotion(pos, "bvh");
-
-
 	}
 	std::cout<<1<<std::endl;
 	if(ppo!=""){
@@ -65,7 +68,7 @@ MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 		DPhy::SetSkeletonColor(mSkel_sim, Eigen::Vector4d(164./255., 235./255.,	13./255., 1.0));
 		initNetworkSetting("PPO",ppo);
 		this->render_sim=true;
-		
+		this->play_sim = true;
 	}
 	else if(amp!=""){
 		
@@ -75,7 +78,9 @@ MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 
 		initNetworkSetting("AMP",amp);
 		this->render_amp=true;
-		
+		this->play_amp = true;
+
+		this->mTargetPos.setZero();
 	}
 	
 
@@ -107,12 +112,23 @@ void
 MainInterface::
 SetFrame(int n)
 {
-	if(render_bvh)
+	if(render_bvh && (n < mMotion_bvh.size()-1))
 		mSkel->setPositions(mMotion_bvh[n]);
-	if(render_sim) 
+	else
+		this->play_bvh = false;
+
+	if(render_sim && (n < mMotion_sim.size()-1)) 
 		mSkel_sim->setPositions(mMotion_sim[n]);
-	if(render_amp) 
+	else
+		this->play_sim = false;
+
+	if(render_amp && (n < mMotion_amp.size()-1)){
 		mSkel_amp->setPositions(mMotion_amp[n]);
+		this->mTargetPos = mMotion_tar[n];
+	} 
+		
+	else
+		this->play_amp = false;
 }
 void
 MainInterface::
@@ -150,6 +166,12 @@ DrawSkeletons()
 		GUI::DrawSkeleton(this->mSkel_sim, 0);
 	if(render_amp)
 		GUI::DrawSkeleton(this->mSkel_amp, 0);
+
+	glPushMatrix();
+	glColor3f(0.2,0.2,0.2);
+	glTranslated(this->mTargetPos[0],0.1,this->mTargetPos[2]);
+	GUI::DrawSphere(0.1);
+	glPopMatrix();
 	glPopMatrix();
 }	
 
@@ -208,19 +230,15 @@ initNetworkSetting(std::string type, std::string net) {
 			py::str module_dir = (std::string(PROJECT_DIR)+"/network").c_str();
 			
 			sys_module.attr("path").attr("insert")(1, module_dir);
-			std::cout<<7<<std::endl;
 
     		py::object ppo_main = py::module::import("ppo");
-			std::cout<<8<<std::endl;
 
 			this->mPPO = ppo_main.attr("PPO")();
 
 			std::string path = std::string(PROJECT_DIR)+ std::string("/network/output/") + net;
-			std::cout<<9<<std::endl;
 			this->mPPO.attr("initRun")(path,
 									   this->mController->GetNumState(), 
 									   this->mController->GetNumAction());
-			std::cout<<10<<std::endl;
 
 			RunPPO(type);
     	}
@@ -258,6 +276,7 @@ MainInterface::
 RunPPO(std::string type) {
 	std::vector<Eigen::VectorXd> pos_sim;
 	std::vector<Eigen::VectorXd> pos_amp;
+	std::vector<Eigen::VectorXd> pos_tar;
 
 	int count = 0;
 	mController->Reset(false);
@@ -313,10 +332,14 @@ RunPPO(std::string type) {
 
 			Eigen::VectorXd position = this->mController->GetPositions(i);
 			pos_amp.push_back(position);
+
+			Eigen::VectorXd target_position = this->mController->GetTargetPositions(i);
+			pos_tar.push_back(target_position);
 			
 			
 		}
 		UpdateMotion(pos_amp, "amp");
+		UpdateMotion(pos_tar, "target");
 	}
 
 
@@ -335,21 +358,21 @@ UpdateMotion(std::vector<Eigen::VectorXd> motion, const char* type)
 	else if(!strcmp(type,"amp")) {
 		mMotion_amp = motion;	
 	}
-	// else if(type == 3) {
-	// 	mMotion_exp = motion;	
-	// } else if(type == 4) {
+	else if(type == "target") {
+		mMotion_tar = motion;	
+	}
+	 // else if(type == 4) {
 	// 	mMotion_points_left = motion;
 	// } else if(type == 5){
 	// 	mMotion_obj = motion;
 	// } else if(type == 6){
 	// 	mMotion_points_right = motion;
 	// }
-	mCurFrame = 0;
-	if(mTotalFrame == 0)
-		mTotalFrame = motion.size();
-	else if(mTotalFrame > motion.size()) {
-		mTotalFrame = motion.size();
-	}
+	this->mCurFrame = 0;
+	if(this->mTotalFrame == 0)
+		this->mTotalFrame = motion.size();
+	else if(mTotalFrame < motion.size())
+		this->mTotalFrame = motion.size();
 }
 
 
@@ -550,10 +573,9 @@ Timer(int value)
 	//double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count()/1000000.;
 
 
-	if(on_animation && this->mCurFrame < this->mTotalFrame - 1){
+	if(on_animation && (this->mCurFrame < this->mTotalFrame - 1) && (play_amp || play_sim || play_bvh)){
         this->mCurFrame++;
-        SetFrame(this->mCurFrame);
-        	
+        SetFrame(this->mCurFrame);  	
     }
     SetFrame(this->mCurFrame);
 	std::chrono::steady_clock::time_point end= std::chrono::steady_clock::now();

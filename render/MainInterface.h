@@ -61,6 +61,8 @@ protected:
 	dart::dynamics::SkeletonPtr 	mSkel_amp;
 	dart::dynamics::SkeletonPtr 	mSkel_sim;
 
+	Eigen::Vector3d mTargetPos;
+
 	int     drag_mouse_r;
 	int     drag_mouse_l;
 	int     last_mouse_x, last_mouse_y;
@@ -71,6 +73,7 @@ protected:
 	std::vector<Eigen::VectorXd> mMotion_bvh;
 	std::vector<Eigen::VectorXd> mMotion_sim;
 	std::vector<Eigen::VectorXd> mMotion_amp;
+	std::vector<Eigen::VectorXd> mMotion_tar;
 
 	int mx;
 	int my;
@@ -81,6 +84,7 @@ protected:
 	bool on_animation;
 	int speed_type;
 	int motion_type;
+	std::string bvh_type;
 
 	int mCurFrame;
 	int mTotalFrame;
@@ -94,6 +98,13 @@ protected:
 	bool render_bvh=false;
 	bool render_sim=false;
 	bool render_amp=false;
+
+
+	bool play_bvh=false;
+	bool play_sim=false;
+	bool play_amp=false;
+
+
 
 	
 	bool isRecord=false;

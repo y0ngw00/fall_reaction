@@ -35,7 +35,7 @@ public:
 
 	std::vector<double> GetTrackingReward(Eigen::VectorXd& position, Eigen::VectorXd& position2, 
 						Eigen::VectorXd& velocity, Eigen::VectorXd& velocity2, bool useVelocity);
-	double GetHeadingReward();
+	std::vector<double> GetHeadingReward();
 	double GetParamReward();
 	void UpdateReward();
 	double GetReward() {return mRewardParts[0]; }
@@ -44,8 +44,6 @@ public:
 	Eigen::VectorXd GetState();
 	Eigen::VectorXd RecordPose();
 	Eigen::VectorXd RecordVel();
-	void RecordAgentFeatureSet();
-	void RecordExpertFeatureSet();
 	Eigen::VectorXd GetAgentFeature(){return this->mAgentFeatureSet;}
 	Eigen::VectorXd GetExpertFeature(){return this->mExpertFeatureSet;}
 	
@@ -89,6 +87,13 @@ public:
 	std::vector<double> GetRewardByParts() {return mRewardParts; }
 
 	void SaveDisplayedData(std::string directory, bool bvh);
+
+	void SetRandomTarget(const Eigen::Vector3d& root_pos);
+
+	Eigen::Vector3d GetTargetPosition(){return this->target_pos;}
+	double GetTargetPositionLimit(){return this->mMaxTargetDist;}
+	double GetAccessThreshold(){return this->dist_threshold;}
+	double GetTargetSpeed(){return this->mTargetSpeed;}
 
 
 
@@ -154,7 +159,7 @@ protected:
 	std::vector<Eigen::VectorXd> mRecordPosition;
 	std::vector<Eigen::VectorXd> mRecordVelocity;
 	std::vector<Eigen::Vector3d> mRecordCOM;
-	std::vector<Eigen::VectorXd> mRecordTargetPosition;
+	std::vector<Eigen::Vector3d> mRecordTargetPosition;
 	std::vector<Eigen::VectorXd> mRecordBVHPosition;
 	std::vector<double> mRecordPhase;
 	std::vector<std::pair<bool, bool>> mRecordFootContact;
@@ -177,6 +182,12 @@ protected:
 
 	double target_speed;
 	Eigen::Vector3d target_pos;
+
+	double max_dist;
+	double mMinTargetDist;
+	double mMaxTargetDist;
+	double dist_threshold;
+	double mTargetSpeed;
 
 };
 }

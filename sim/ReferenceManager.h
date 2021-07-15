@@ -48,6 +48,7 @@ public:
 	
 	void LoadMotionFromBVH(std::string filename);
 	void LoadMotionPairFromBVH(std::string filename);
+	int GetMotionIndex(std::string motion_name);
 	void GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_phase, std::vector<std::vector<Motion*>>& p_container);
 	void SelectMotion(int i);
 	int GetNumMotions() {return this->mNumMotions;}
@@ -58,19 +59,15 @@ public:
 	double GetTimeStep(double t);
 	int GetPhaseLength() {return mPhaseLength; }
 	int GetPhaseLength(int id) {return this->mMotionPhases[id]; }
+	int GetTotalFrameperMotion() {return this->mFramePerMotion;}
 	int GetDOF() {return mDOF;}
 	std::vector<double> GetContacts(double t);
 
-	void ResetOptimizationParameters(bool reset_displacement=true);
+	// void ResetOptimizationParameters(bool reset_displacement=true);
 	void setRecord(){mRecord = true;}
 
 	int GetNumPose() { return this->mNumPose;}
-	void SetRandomTarget(const Eigen::Vector3d& root_pos);
 
-	Eigen::Vector3d GetTargetPosition(){return this->target_pos;}
-	double GetTargetPositionLimit(){return this->mMaxTargetDist;}
-	double GetAccessThreshold(){return this->dist_threshold;}
-	double GetTargetSpeed(){return this->mTargetSpeed;}
 
 		
 
@@ -111,13 +108,10 @@ protected:
 
 	int mNumPose;
 	int motion_it;
+	std::vector<std::string> motion_list;
 	std::vector<std::string> mEndEffectors;
 
-	Eigen::Vector3d target_pos;
-	double max_dist;
-	double mMaxTargetDist;
-	double dist_threshold;
-	double mTargetSpeed;
+
 
 
 
