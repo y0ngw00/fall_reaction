@@ -31,7 +31,7 @@ if type(tf.contrib) != types.ModuleType:
 	tf.contrib._warning = None
 class AMP(object):
 	def __init__(self, learning_rate_actor=1e-5, learning_rate_critic=0.001, learning_rate_disc=1e-6,learning_rate_decay=0.9993,
-		gamma=0.95, gamma_sparse=0.99, lambd=0.95, grad_penalty=10,task_reward_w=0.5, epsilon=0.2):
+		gamma=0.95, gamma_sparse=0.99, lambd=0.95, grad_penalty=10,task_reward_w=0.0, epsilon=0.2):
 		random.seed(int(time.time()))
 		np.random.seed(int(time.time()))
 		tf.set_random_seed(int(time.time()))
@@ -315,10 +315,10 @@ class AMP(object):
 				assert not np.any(np.isnan(expert_poses))
 				assert not np.any(np.isnan(agent_poses))
 
-				_,l_t, a_r,a_f,l_f,l_r,l_p,pred_f,pred_r = self.sess.run(
+				_,_, m_r,m_f,l_f,l_r,l_p,pred_f = self.sess.run(
 								[self.disc_train_op,self.loss_disc,	
 								self.mean_real,self.mean_fake,self.fake_loss, 
-								self.real_loss,self.penalty_loss, self.disc_fake.pred,self.disc_real.pred], 
+								self.real_loss,self.penalty_loss, self.disc_fake.pred], 
 					feed_dict={
 						self.pose_real: expert_poses,
 						self.pose_sim: agent_poses
@@ -327,8 +327,8 @@ class AMP(object):
 				loss_agent+=l_f
 				loss_expert +=l_r
 				loss_grad += l_p
-				mean_expert += a_r
-				mean_agent += a_f
+				mean_expert += m_r
+				mean_agent += m_f
 
 				disc_reward = self.discReward(pred_f).flatten()
 				disc_rewards.append(disc_reward)

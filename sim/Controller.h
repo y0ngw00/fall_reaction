@@ -90,6 +90,9 @@ public:
 
 	void SetRandomTarget(const Eigen::Vector3d& root_pos);
 
+	Eigen::VectorXd GetAgentParam();
+	Eigen::VectorXd GetExpertParam();
+
 	Eigen::Vector3d GetTargetPosition(){return this->target_pos;}
 	double GetTargetPositionLimit(){return this->mMaxTargetDist;}
 	double GetAccessThreshold(){return this->dist_threshold;}
@@ -148,7 +151,10 @@ protected:
 	std::tuple<double, double, double> mRescaleParameter;
 	std::vector<std::string> mContacts;
 	std::vector<std::string> mEndEffectors;
+	std::vector<std::string> mMotionType;
 	std::vector<std::string> mRewardLabels;
+
+	Eigen::VectorXd mControlObjective;
 
 	std::unique_ptr<dart::collision::CollisionGroup> mCGEL, mCGER, mCGL, mCGR, mCGG, mCGHR, mCGHL, mCGOBJ; 
 
@@ -178,6 +184,11 @@ protected:
 	Eigen::VectorXd mPrevExpertVel;
 	Eigen::VectorXd mAgentFeatureSet;
 	Eigen::VectorXd mExpertFeatureSet;
+
+	int mNumMotionType;
+	int mNumMotionParam;
+
+
 
 
 	double target_speed;

@@ -1,5 +1,5 @@
-mxm_walk.bvh
 mxm_idle.bvh
+mxm_walk.bvh
 mxm_stopandgo.bvh
 mxm_turn_180.bvh
 mxm_walk_right.bvh
