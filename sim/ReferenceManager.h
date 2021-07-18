@@ -65,8 +65,11 @@ public:
 
 	// void ResetOptimizationParameters(bool reset_displacement=true);
 	void setRecord(){mRecord = true;}
-
+	void GetMotionInfo(std::string file_path, std::vector<std::string>& motiontype,std::vector<std::string>& motionlist);
 	int GetNumPose() { return this->mNumPose;}
+
+	std::string GetMotionType(int i){return this->motion_type[i];}
+	int GetNumMotionType(){return this->mNumMotionType;}
 
 
 		
@@ -108,8 +111,11 @@ protected:
 
 	int mNumPose;
 	int motion_it;
+	std::vector<std::string> motion_type;
 	std::vector<std::string> motion_list;
 	std::vector<std::string> mEndEffectors;
+
+	int mNumMotionType;
 
 
 

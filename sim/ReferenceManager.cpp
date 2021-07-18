@@ -22,7 +22,7 @@ ReferenceManager(Character* character)
 	mMotions_container.clear();
 
 	motion_list.clear();
-				
+	motion_type.clear();
 
 	contact.clear();
 	mContacts.clear();
@@ -48,14 +48,39 @@ GetMotionIndex(std::string motion_name){
 
 void
 ReferenceManager::
+GetMotionInfo(std::string file_path, std::vector<std::string>& motiontype,std::vector<std::string>& motionlist){
+	char buffer[100];
+
+	std::ifstream txtread;
+	txtread.open(file_path);
+
+	std::vector<Eigen::VectorXd> param_list;	
+
+	while(txtread>>buffer){
+		if ( !strcmp( buffer, "MOTION_TYPE" ) )
+        {
+            txtread>>buffer;
+            this->mNumMotionType = atoi(buffer);
+        }
+        else{
+        	motionlist.push_back(std::string(buffer));
+
+			txtread>>buffer;
+			motiontype.push_back(std::string(buffer));
+        }	
+	}
+	txtread.close();
+	return;
+}
+
+void
+ReferenceManager::
 LoadMotionFromBVH(std::string filename)
 {
 	
 	mMotions_gen.clear();
 	mMotions_container.clear();
 	std::string txt_path = std::string(PROJECT_DIR) + filename;
-	
-	char buffer[100];
 
 	std::ifstream txtread;
 	txtread.open(txt_path);
@@ -63,9 +88,10 @@ LoadMotionFromBVH(std::string filename)
 		std::cout<<"Text file does not exist from : "<< txt_path << std::endl;
 		return;
 	}
-	while(txtread>>buffer){
-		motion_list.push_back(std::string(buffer));
-	}
+	txtread.close();
+	
+	GetMotionInfo(txt_path, this->motion_type,this->motion_list);
+	std::cout<<"The Number of Motion Files : "<<motion_list.size()<<std::endl;
 	this->mNumMotions=motion_list.size();
 	this->mMotionPhases.resize(mNumMotions);
 

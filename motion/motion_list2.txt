@@ -1,5 +1,1 @@
-mxm_walk.bvh
-mxm_walk.bvh
-mxm_walk.bvh
-mxm_walk.bvh
-mxm_walk.bvh
+mxm_climb_down.bvh

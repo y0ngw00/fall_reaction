@@ -42,8 +42,8 @@ public:
 	std::vector<std::string> GetRewardLabels() {return mRewardLabels; }
 	
 	Eigen::VectorXd GetState();
-	Eigen::VectorXd RecordPose();
-	Eigen::VectorXd RecordVel();
+	Eigen::VectorXd RecordPose(const Eigen::Isometry3d& T_ref_inv);
+	Eigen::VectorXd RecordVel(const Eigen::Isometry3d& T_ref_inv);
 	Eigen::VectorXd GetAgentFeature(){return this->mAgentFeatureSet;}
 	Eigen::VectorXd GetExpertFeature(){return this->mExpertFeatureSet;}
 	
@@ -89,6 +89,9 @@ public:
 	void SaveDisplayedData(std::string directory, bool bvh);
 
 	void SetRandomTarget(const Eigen::Vector3d& root_pos);
+
+	Eigen::VectorXd GetAgentParam(const Eigen::Isometry3d& T_ref_inv);
+	Eigen::VectorXd GetExpertParam(const Eigen::Isometry3d& T_ref_inv);
 
 	Eigen::Vector3d GetTargetPosition(){return this->target_pos;}
 	double GetTargetPositionLimit(){return this->mMaxTargetDist;}
@@ -148,7 +151,10 @@ protected:
 	std::tuple<double, double, double> mRescaleParameter;
 	std::vector<std::string> mContacts;
 	std::vector<std::string> mEndEffectors;
+	std::vector<std::string> mMotionType;
 	std::vector<std::string> mRewardLabels;
+
+	Eigen::VectorXd mControlObjective;
 
 	std::unique_ptr<dart::collision::CollisionGroup> mCGEL, mCGER, mCGL, mCGR, mCGG, mCGHR, mCGHL, mCGOBJ; 
 
@@ -178,6 +184,11 @@ protected:
 	Eigen::VectorXd mPrevExpertVel;
 	Eigen::VectorXd mAgentFeatureSet;
 	Eigen::VectorXd mExpertFeatureSet;
+
+	int mNumMotionType;
+	int mNumMotionParam;
+
+
 
 
 	double target_speed;
