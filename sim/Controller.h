@@ -90,7 +90,7 @@ public:
 
 	void SetRandomTarget(const Eigen::Vector3d& root_pos);
 
-	Eigen::VectorXd GetAgentParam();
+	Eigen::VectorXd GetAgentParam(const Eigen::VectorXd& p_prev);
 	Eigen::VectorXd GetExpertParam();
 
 	Eigen::Vector3d GetTargetPosition(){return this->target_pos;}

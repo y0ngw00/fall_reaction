@@ -169,7 +169,7 @@ DrawSkeletons()
 
 	glPushMatrix();
 	glColor3f(0.2,0.2,0.2);
-	glTranslated(this->mTargetPos[0],0.1,this->mTargetPos[2]);
+	glTranslated(this->mTargetPos[0],this->mTargetPos[1],this->mTargetPos[2]);
 	GUI::DrawSphere(0.1);
 	glPopMatrix();
 	glPopMatrix();

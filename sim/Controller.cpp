@@ -89,8 +89,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	this->mNumMotionType = this->mReferenceManager->GetNumMotionType();
 	this->mNumMotionParam = 3;
 
-	this->mNumFeature = 2 * (RecordPose().rows() + RecordVel().rows());
-	 // + mNumMotionType + mNumMotionParam;
+	this->mNumFeature = 2 * (RecordPose().rows() + RecordVel().rows())+ mNumMotionParam;
 	this->mNumPose = this->mReferenceManager->GetNumPose();
 
 
@@ -185,7 +184,7 @@ Step()
 
 	Eigen::VectorXd mCurrAgentPose = RecordPose();
 	Eigen::VectorXd mCurrAgentVel = RecordVel();
-	//Eigen::VectorXd mAgentParam = GetAgentParam();
+	Eigen::VectorXd mAgentParam = GetAgentParam(p_now);
 
 	auto& skel = this->mCharacter->GetSkeleton();
 	Eigen::VectorXd p_save = skel->getPositions();
@@ -203,7 +202,7 @@ Step()
 
 	Eigen::VectorXd mCurrExpertPose = RecordPose();
 	Eigen::VectorXd mCurrExpertVel = RecordVel();
-	//Eigen::VectorXd mExpertParam = GetExpertParam();
+	Eigen::VectorXd mExpertParam = GetExpertParam();
 
 	Eigen::VectorXd mMotionClass(this->mNumMotionType);
 	mMotionClass.setZero();
@@ -217,8 +216,8 @@ Step()
 	skel->setPositions(p_save);
 	skel->setVelocities(v_save);
 
-	this->mAgentFeatureSet<<mCurrAgentPose,mPrevAgentPose,mCurrAgentVel,mPrevAgentVel;
-	this->mExpertFeatureSet<<mCurrExpertPose,mPrevExpertPose,mCurrExpertVel,mPrevExpertVel;
+	this->mAgentFeatureSet<<mCurrAgentPose,mPrevAgentPose,mCurrAgentVel,mPrevAgentVel, mAgentParam;
+	this->mExpertFeatureSet<<mCurrExpertPose,mPrevExpertPose,mCurrExpertVel,mPrevExpertVel, mExpertParam;
 
 	if(dart::math::isNan(mExpertFeatureSet)){
 		std::cout<<"EXPERT";
@@ -826,14 +825,18 @@ RecordVel(){
 
 Eigen::VectorXd
 Controller::
-GetAgentParam(){
+GetAgentParam(const Eigen::VectorXd& p_prev){
 	auto& skel = this->mCharacter->GetSkeleton();
 
 	Eigen::Isometry3d T_ref = this->getReferenceTransform();
 	Eigen::Isometry3d T_ref_inv = T_ref.inverse();
 	Eigen::Vector3d P0 = T_ref_inv*skel->getCOM();
 
-	Eigen::Vector3d P1 = this->target_pos;
+	Eigen::VectorXd p_save = skel->getPositions();
+	skel->setPositions(p_prev);
+
+	Eigen::Vector3d P1 = T_ref_inv*skel->getCOM();
+	skel->setPositions(p_save);
 
 
 	Eigen::Vector3d dir = P1-P0;
@@ -948,19 +951,17 @@ Reset(bool RSI)
 	this->nTotalSteps = 0;
 	this->mTimeElapsed = 0;
 
-	// Motion* p_v_target;
-	// p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
-	// // Eigen::VectorXd Initialpose = p_v_target->GetPosition();
+
+	this->mTargetPositions.setZero();
+	this->mTargetVelocities.setZero();
+
+	Motion* p_v_target;
+	p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	// Eigen::VectorXd Initialpose = p_v_target->GetPosition();
 	// this->mTargetVelocities = p_v_target->GetVelocity();
-	// this->mTargetPositions = p_v_target->GetPosition();
-	// delete p_v_target;
-
-	//this->mPDTargetPositions = mTargetPositions;
-	//this->mPDTargetVelocities = mTargetVelocities;
-
-	// skel->setPositions(mTargetPositions);
-	// skel->setVelocities(mTargetVelocities);
-	// skel->computeForwardKinematics(true,true,false);
+	this->mTargetPositions.segment<3>(3) = p_v_target->GetPosition().segment<3>(3);
+	this->mTargetPositions[4]+=0.03;
+	delete p_v_target;
 
 	skel->setPositions(mTargetPositions);
 	skel->setVelocities(mTargetVelocities);
@@ -1010,8 +1011,7 @@ Reset(bool RSI)
 	this->mPrevExpertPose = this->mPrevAgentPose;
 	this->mPrevExpertVel = this->mPrevAgentVel;
 
-	this-> mNumFeature = (mPrevAgentPose.rows()+mPrevAgentVel.rows())*2;
-	 // + mNumMotionType + mNumMotionParam;
+	this-> mNumFeature = (mPrevAgentPose.rows()+mPrevAgentVel.rows())*2+ mNumMotionType + mNumMotionParam;
 	this-> mAgentFeatureSet.resize(mNumFeature);
 	this-> mExpertFeatureSet.resize(mNumFeature);
 	this-> mAgentFeatureSet.setZero();
