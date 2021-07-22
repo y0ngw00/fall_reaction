@@ -6,7 +6,7 @@
 MainInterface::
 MainInterface(std::string bvh, std::string ppo, std::string amp):GLUTWindow()
 {
-	std::srand(std::time(0));
+	std::srand(std::time(NULL));
 	this->character_path = std::string(PROJECT_DIR)+std::string("/character/") + std::string(REF_CHARACTER_TYPE) + std::string(".xml");
 
 	this->frame_no = 0;

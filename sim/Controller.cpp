@@ -9,7 +9,6 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	w_p(0.35),w_v(0.1),w_ee(0.3),w_com(0.25),
 	terminationReason(-1),mIsNanAtTerminal(false), mIsTerminal(false)
 {
-	std::srand(std::time(0));
 	initPhysicsEnv();
 
 	this->mRescaleParameter = std::make_tuple(1.0, 1.0, 1.0);
@@ -154,17 +153,17 @@ Step()
 	nTotalSteps += 1;
 	int n_bnodes = mCharacter->GetSkeleton()->getNumBodyNodes();
 
-	Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
-	Eigen::VectorXd p_now = p_v_target->GetPosition();
-	this->mTargetPositions = p_now ; //p_v_target->GetPosition();
-	this->mTargetVelocities = mCharacter->GetSkeleton()->getPositionDifferences(mTargetPositions, mPrevTargetPositions) / 0.033;
-	mPrevTargetPositions = mTargetPositions;
-	delete p_v_target;
+	//Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	//Eigen::VectorXd p_now = p_v_target->GetPosition();
+	//this->mTargetPositions = p_now ; //p_v_target->GetPosition();
+	//this->mTargetVelocities = mCharacter->GetSkeleton()->getPositionDifferences(mTargetPositions, mPrevTargetPositions) / 0.033;
+	//mPrevTargetPositions = mTargetPositions;
+	//delete p_v_target;
 
 	Eigen::VectorXd torque;
 
 	Eigen::VectorXd PDTargetPosition = Eigen::VectorXd::Zero(dof);
-	PDTargetPosition.head(6) = p_now.head(6);
+	//PDTargetPosition.head(6) = p_now.head(6);
 	PDTargetPosition.tail(dof-6) = mActions;
 	
 	for(int i = 0; i < this->mSimPerCon; i++){
@@ -184,14 +183,14 @@ Step()
 
 	Eigen::VectorXd mCurrAgentPose = RecordPose();
 	Eigen::VectorXd mCurrAgentVel = RecordVel();
-	Eigen::VectorXd mAgentParam = GetAgentParam(p_now);
+	Eigen::VectorXd mAgentParam = GetAgentParam();
 
 	auto& skel = this->mCharacter->GetSkeleton();
 	Eigen::VectorXd p_save = skel->getPositions();
 	Eigen::VectorXd v_save = skel->getVelocities();
 
 
-	p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
 	Eigen::VectorXd p_ref = p_v_target->GetPosition();
 	Eigen::VectorXd v_ref = p_v_target->GetVelocity();
 	delete p_v_target;
@@ -228,7 +227,7 @@ Step()
 		std::cout<<mAgentFeatureSet.transpose()<<std::endl;
 	}
 
-
+	this->mPrevPosition = p_save;
 
 	this->mPrevAgentPose = mCurrAgentPose;
 	this->mPrevAgentVel = mCurrAgentVel;
@@ -378,7 +377,7 @@ UpdateTerminalInfo()
 	// 	mIsTerminal = true;
 	// 	terminationReason = 5;
 	// }
-	else if(mCurrentFrame > mReferenceManager->GetPhaseLength()*10) { // this->mBVH->GetMaxFrame() - 1.0){
+	else if(!mRecord && mCurrentFrame > mReferenceManager->GetPhaseLength()*10) { // this->mBVH->GetMaxFrame() - 1.0){
 		mIsTerminal = true;
 		terminationReason =  8;
 	}
@@ -825,7 +824,7 @@ RecordVel(){
 
 Eigen::VectorXd
 Controller::
-GetAgentParam(const Eigen::VectorXd& p_prev){
+GetAgentParam(){
 	auto& skel = this->mCharacter->GetSkeleton();
 
 	Eigen::Isometry3d T_ref = this->getReferenceTransform();
@@ -833,7 +832,7 @@ GetAgentParam(const Eigen::VectorXd& p_prev){
 	Eigen::Vector3d P0 = T_ref_inv*skel->getCOM();
 
 	Eigen::VectorXd p_save = skel->getPositions();
-	skel->setPositions(p_prev);
+	skel->setPositions(this->mPrevPosition);
 
 	Eigen::Vector3d P1 = T_ref_inv*skel->getCOM();
 	skel->setPositions(p_save);
@@ -933,11 +932,28 @@ Reset(bool RSI)
 {
 	this->mWorld->reset();
 
+	this->mTargetPositions.setZero();
+	this->mTargetVelocities.setZero();
+
+	Motion* p_v_target;
+	mReferenceManager->SelectMotion(0);
+	p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	// Eigen::VectorXd Initialpose = p_v_target->GetPosition();
+	// this->mTargetVelocities = p_v_target->GetVelocity();
+	this->mTargetPositions = p_v_target->GetPosition();
+	this->mTargetVelocities = p_v_target->GetVelocity();
+	delete p_v_target;
+
+	auto& skel = this->mCharacter->GetSkeleton();
+
+	skel->setPositions(mTargetPositions);
+	skel->setVelocities(mTargetVelocities);
+
+	this->mPrevPosition = mTargetPositions;
 	
 	this-> motion_it = std::rand()%this->mNumMotions;
 	mReferenceManager->SelectMotion(motion_it);
 	
-	dart::dynamics::SkeletonPtr skel = mCharacter->GetSkeleton();
 	skel->clearConstraintImpulses();
 	skel->clearInternalForces();
 	skel->clearExternalForces();
@@ -950,21 +966,6 @@ Reset(bool RSI)
 	this->mStartFrame = this->mCurrentFrame;
 	this->nTotalSteps = 0;
 	this->mTimeElapsed = 0;
-
-
-	this->mTargetPositions.setZero();
-	this->mTargetVelocities.setZero();
-
-	Motion* p_v_target;
-	p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
-	// Eigen::VectorXd Initialpose = p_v_target->GetPosition();
-	// this->mTargetVelocities = p_v_target->GetVelocity();
-	this->mTargetPositions.segment<3>(3) = p_v_target->GetPosition().segment<3>(3);
-	this->mTargetPositions[4]+=0.03;
-	delete p_v_target;
-
-	skel->setPositions(mTargetPositions);
-	skel->setVelocities(mTargetVelocities);
 
 	Eigen::Isometry3d T_ref = this->getReferenceTransform();
 	Eigen::Isometry3d T_ref_inv = T_ref.inverse();
@@ -1088,21 +1089,19 @@ Controller::
 SetRandomTarget(const Eigen::Vector3d& root_pos){
 	double time_min = 1;
 	double time_max = 5;
-	this->mTargetSpeed = 1.0;
+	this->mTargetSpeed = 1.2;
 
 	this->mMinTargetDist = 1.0;
-	this->mMaxTargetDist = 1.5;
-	this->dist_threshold = 0.3;
+	this->mMaxTargetDist = 3.0;
+	this->dist_threshold = 0.1;
  	
+	std::srand(std::time(NULL));
 
-
-
-	double dist = DPhy::doubleRand(mMinTargetDist, mMaxTargetDist);
-	double theta = DPhy::doubleRand(0.0, 2 * M_PI);
-	this->target_pos[0] = root_pos[0] + dist * std::cos(theta);
+	double dist = mMinTargetDist + (mMaxTargetDist-mMinTargetDist) * double(std::rand()/RAND_MAX);
+	double theta = 2 * M_PI * double(std::rand()/RAND_MAX);
+	this->target_pos[0] = root_pos[0] + dist * std::sin(theta);
 	this->target_pos[1] = 0.8;
-	this->target_pos[2] = root_pos[2] + dist * std::sin(theta);
-
+	this->target_pos[2] = root_pos[2] + dist * std::cos(theta);
 }
 
 

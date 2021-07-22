@@ -31,7 +31,7 @@ if type(tf.contrib) != types.ModuleType:
 	tf.contrib._warning = None
 class AMP(object):
 	def __init__(self, learning_rate_actor=1e-5, learning_rate_critic=0.001, learning_rate_disc=1e-6,learning_rate_decay=0.9993,
-		gamma=0.95, gamma_sparse=0.99, lambd=0.95, grad_penalty=10,task_reward_w=0.0, epsilon=0.2):
+		gamma=0.95, gamma_sparse=0.99, lambd=0.95, grad_penalty=10,task_reward_w=0.5, epsilon=0.2):
 		random.seed(int(time.time()))
 		np.random.seed(int(time.time()))
 		tf.set_random_seed(int(time.time()))

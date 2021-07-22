@@ -1059,6 +1059,7 @@ Eigen::MatrixXd getPseudoInverse(Eigen::MatrixXd m){
 	return inv;
 }
 double doubleRand(double min, double max){
+	
 	double w = double(std::rand()/RAND_MAX);
 
 	return (1-w) * min + w * max;

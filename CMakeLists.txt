@@ -26,8 +26,9 @@ find_package(pybind11 REQUIRED)
 
 add_subdirectory( sim )
 add_subdirectory( network )
-add_subdirectory( render )
-#add_subdirectory( render_qt )
+#add_subdirectory( render )
+add_subdirectory( render_ui )
+add_subdirectory( imgui )
 
 
 
