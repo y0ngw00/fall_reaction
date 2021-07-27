@@ -140,7 +140,9 @@ protected:
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
 
+	Eigen::VectorXd mPPrevPosition;
 	Eigen::VectorXd mPrevPosition;
+	Eigen::VectorXd COM_prev;
 
 	Eigen::VectorXd mPDTargetPositions;
 	Eigen::VectorXd mPDTargetVelocities;
@@ -179,6 +181,11 @@ protected:
 	Eigen::Vector3d mStartFoot; //middle of two feet at 0th frame
 
 	int motion_it;
+
+	Eigen::VectorXd mPPrevAgentPose;
+	Eigen::VectorXd mPPrevAgentVel;
+	Eigen::VectorXd mPPrevExpertPose;
+	Eigen::VectorXd mPPrevExpertVel;
 	
 	Eigen::VectorXd mPrevAgentPose;
 	Eigen::VectorXd mPrevAgentVel;

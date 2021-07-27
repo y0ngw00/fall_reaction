@@ -84,7 +84,7 @@ class AMP(object):
 			self.RMS.setNumStates(self.num_state)
 
 	def initTrain(self, name, env, pretrain="", directory=None, 
-		batch_size=256, batch_size_disc=512, steps_per_iteration=4096, num_buffer=10000,optim_frequency=1):
+		batch_size=256, batch_size_disc=64, steps_per_iteration=4096, num_buffer=10000,optim_frequency=1):
 
 		self.name = name
 		self.directory = directory
