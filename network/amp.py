@@ -14,10 +14,13 @@ import datetime
 import os
 import time
 import sys
+
 from IPython import embed
 from copy import deepcopy
 from utils import RunningMeanStd
 from utils import ReplayBuffer
+import utils_mpi
+
 from tensorflow.python import pywrap_tensorflow
 import scipy.integrate as integrate
 import types
@@ -81,7 +84,7 @@ class AMP(object):
 			self.RMS.setNumStates(self.num_state)
 
 	def initTrain(self, name, env, pretrain="", directory=None, 
-		batch_size=256, batch_size_disc=64, steps_per_iteration=2048, num_buffer=100000,optim_frequency=1):
+		batch_size=256, batch_size_disc=512, steps_per_iteration=4096, num_buffer=10000,optim_frequency=1):
 
 		self.name = name
 		self.directory = directory
@@ -98,7 +101,8 @@ class AMP(object):
 		self.num_feature = self.env.num_feature
 		self.num_poses= self.env.num_poses
 
-		self.num_buffer = num_buffer
+		self.num_procs = utils_mpi.GetNumProcs()
+		self.num_buffer = int(np.ceil(num_buffer/self.num_procs))
 		self.expert_buffer = ReplayBuffer(num_buffer)
 		self.agent_buffer = ReplayBuffer(num_buffer)
 
@@ -178,43 +182,50 @@ class AMP(object):
 		self.disc_real = Discriminator(self.sess, name, pose_real)
 		self.disc_fake = Discriminator(self.sess, name, pose_sim, reuse=True)
 
-
 		with tf.variable_scope(name+'_Optimize'):
 			self.fake_loss =  tf.reduce_mean(tf.square(self.disc_fake.pred + 1),axis=-1)
 			self.real_loss = tf.reduce_mean(tf.square(self.disc_real.pred - 1),axis=-1)
 			disc_loss = 0.5* (self.fake_loss + self.real_loss)
 
-		disc_trainer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_disc)
+			disc_trainer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_disc)
 
-		self.mean_real = tf.reduce_mean(self.disc_real.pred)
-		self.mean_fake = tf.reduce_mean(self.disc_fake.pred)
-		# tf.summary.scalar("Agent logits", self.mean_fake)
-		# tf.summary.scalar("Expert logits", self.mean_real)
+			self.mean_real = tf.reduce_mean(self.disc_real.pred)
+			self.mean_fake = tf.reduce_mean(self.disc_fake.pred)
+			# tf.summary.scalar("Agent logits", self.mean_fake)
+			# tf.summary.scalar("Expert logits", self.mean_real)
 
+			grad_real = tf.gradients(ys=self.disc_real.pred, xs=pose_real)
+			grad_reals = tf.concat(grad_real, axis=-1)
+			norm_grad = tf.reduce_sum(tf.square(grad_reals), axis=-1)
+			self.penalty_loss = grad_penalty * 0.5 * tf.reduce_mean(norm_grad)        
 
-		grad_real = tf.gradients(ys=self.disc_real.pred, xs=pose_real)
-		grad_reals = tf.concat(grad_real, axis=-1)
-		norm_grad = tf.reduce_sum(tf.square(grad_reals), axis=-1)
-		self.penalty_loss = grad_penalty * 0.5 * tf.reduce_mean(norm_grad)        
-
-		# _grads, _ = zip(*disc_trainer.compute_gradients(self.real_loss));
-		# _ , _grad_norm_real = tf.clip_by_global_norm(_grads, 0.5)
-		# self.penalty_loss = grad_penalty/2 *_grad_norm_real
-
+			# _grads, _ = zip(*disc_trainer.compute_gradients(self.real_loss));
+			# _ , _grad_norm_real = tf.clip_by_global_norm(_grads, 0.5)
+			# self.penalty_loss = grad_penalty/2 *_grad_norm_real
 		loss = disc_loss + self.penalty_loss
-
 
 		# tf.summary.scalar("Total Loss", loss)
 		# tf.summary.scalar("Discriminator loss", disc_loss)
 		# tf.summary.scalar("Gradient penalty loss", self.penalty_loss)
-		grads, params = zip(*disc_trainer.compute_gradients(loss));
-		grads, _grad_norm = tf.clip_by_global_norm(grads, 0.5)
+
+		# disc_vars = tf.trainable_variables()
+
+		disc_vars = tf.trainable_variables(scope = name+'_Discriminator')
+		self.disc_grads = tf.gradients(loss, disc_vars)
+		self.disc_solver = utils_mpi.MPImanager(self.sess, disc_trainer, disc_vars)
+		# grads, params = zip(*disc_trainer.compute_gradients(loss));
+		# grads, _grad_norm = tf.clip_by_global_norm(grads, 0.5)
 		
-		grads_and_vars = list(zip(grads, params))
-		disc_train_op = disc_trainer.apply_gradients(grads_and_vars)
+		# grads_and_vars = list(zip(grads, params))
+		# disc_train_op = disc_trainer.apply_gradients(grads_and_vars)
 
-		return disc_train_op, loss
+		return disc_trainer, loss
 
+	def _tf_vars(self, scope=''):
+		with self.sess.as_default(), tf.Graph().as_default():
+			res = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope= scope)
+			assert len(res) > 0
+		return res
 
 	def createActor(self, clip=True):
 		actor_trainer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_ph)
@@ -264,8 +275,8 @@ class AMP(object):
 			surrogate = -tf.reduce_mean(tf.minimum(self.ratio*self.GAE, clipped_ratio*self.GAE))
 			self.loss_actor = surrogate
 
-		self.disc_train_op, self.loss_disc = self.createDiscriminator(name,self.grad_penalty,self.pose_real,self.pose_sim)
-		
+		self.disc_trainer, self.loss_disc = self.createDiscriminator(name,self.grad_penalty,self.pose_real,self.pose_sim)
+
 		actor_trainer, self.actor_train_op= self.createActor()
 
 		self.critic, self.critic_train_op, self.loss_critic = self.createCriticNetwork(name, self.state, self.TD)
@@ -278,6 +289,8 @@ class AMP(object):
 
 		self.saver = tf.train.Saver(var_list=save_list, max_to_keep=1)
 		self.sess.run(tf.global_variables_initializer())
+
+		self.disc_solver.sync()
 
 
 	def discReward(self, logits):
@@ -299,6 +312,8 @@ class AMP(object):
 
 		disc_steps=1
 		# update_iter = int(len(ind)//self.batch_size_disc)
+
+		batch_size = int(np.ceil(self.batch_size_disc/self.num_procs))
 		update_iter = int(self.agent_buffer.get_current_size()// self.batch_size_disc)
 
 		assert self.agent_buffer.get_current_size() == self.expert_buffer.get_current_size()
@@ -315,8 +330,8 @@ class AMP(object):
 				assert not np.any(np.isnan(expert_poses))
 				assert not np.any(np.isnan(agent_poses))
 
-				_,_, m_r,m_f,l_f,l_r,l_p,pred_f = self.sess.run(
-								[self.disc_train_op,self.loss_disc,	
+				grads,_, m_r,m_f,l_f,l_r,l_p,pred_f = self.sess.run(
+								[self.disc_grads,self.loss_disc,	
 								self.mean_real,self.mean_fake,self.fake_loss, 
 								self.real_loss,self.penalty_loss, self.disc_fake.pred], 
 					feed_dict={
@@ -329,6 +344,8 @@ class AMP(object):
 				loss_grad += l_p
 				mean_expert += m_r
 				mean_agent += m_f
+
+				self.disc_solver.update_grad(grads)
 
 				disc_reward = self.discReward(pred_f).flatten()
 				disc_rewards.append(disc_reward)
@@ -509,7 +526,6 @@ class AMP(object):
 			epi_info = [[] for _ in range(self.num_slaves)]	
 
 			while True:
-
 				actions, neglogprobs = self.actor.getAction(states)
 				values = self.critic.getValue(states)
 				rewards, dones, params = self.env.step(actions)

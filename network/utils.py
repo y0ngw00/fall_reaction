@@ -23,6 +23,7 @@
 import numpy as np
 import pickle
 from IPython import embed
+import tensorflow as tf
  
 class RunningMeanStd(object):
     # https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Parallel_algorithm
@@ -111,6 +112,7 @@ class ReplayBuffer(object):
     def clear(self):
         self.curr_size = 0
         self.total_count = 0
+        self.buffer=None
 
     def store(self, data):
         n = len(data)
@@ -169,3 +171,48 @@ def update_mean_var_count_from_moments(mean, var, count, batch_mean, batch_var, 
     new_count = tot_count
 
     return new_mean, new_var, new_count
+
+def get_shape_tf(x):
+    out = [k.value for k in x.get_shape()]
+    assert all(isinstance(a, int) for a in out), "shape function assumes that shape is fully known" 
+    return out
+
+def numel_tf(x):
+    out = get_shape_tf(x)
+    n = int(np.prod(out))
+    return n
+
+def flatten(arr_list):
+    return np.concatenate([np.reshape(a, [-1]) for a in arr_list], axis=0)
+
+class SetFromFlat(object):
+    def __init__(self, sess, var_list, dtype=tf.float32):
+        assigns = []
+        shapes = list(map(get_shape_tf, var_list))
+        total_size = np.sum([int(np.prod(shape)) for shape in shapes])
+
+        self.sess = sess
+        self.theta = tf.placeholder(dtype,[total_size])
+        start=0
+        assigns = []
+
+        for (shape,v) in zip(shapes,var_list):
+            size = int(np.prod(shape))
+            assigns.append(tf.assign(v, tf.reshape(self.theta[start:start+size],shape)))
+            start += size
+
+        self.op = tf.group(*assigns)
+        return
+
+    def __call__(self, theta):
+        self.sess.run(self.op, feed_dict={self.theta:theta})
+        return
+
+class GetFlat(object):
+    def __init__(self, sess, var_list):
+        self.sess = sess
+        self.op = tf.concat(axis=0, values=[tf.reshape(v, [numel_tf(v)]) for v in var_list])
+        return
+
+    def __call__(self):
+        return self.sess.run(self.op)
