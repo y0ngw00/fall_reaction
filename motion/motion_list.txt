@@ -8,3 +8,11 @@ mxm_walk_left.bvh
 mxm_walk_circle.bvh
 mxm_walk_circle_r.bvh
 mxm_walk_backward.bvh
+mxm_fjump.bvh jump
+mxm_jogging.bvh walk
+mxm_jump1.bvh jump
+mxm_jump2.bvh jump
+mxm_jump3.bvh jump
+mxm_run.bvh walk
+mxm_run2.bvh walk
+mxm_jump4.bvh jump

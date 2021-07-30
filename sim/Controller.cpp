@@ -88,7 +88,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	this->mNumMotionType = this->mReferenceManager->GetNumMotionType();
 	this->mNumMotionParam = 4;
 
-	this->mNumFeature = 3 * (RecordPose().rows() + RecordVel().rows())+ mNumMotionParam;
+	this->mNumFeature = 2 * (RecordPose().rows() + RecordVel().rows())+ mNumMotionParam;
 	this->mNumPose = this->mReferenceManager->GetNumPose();
 
 
@@ -98,8 +98,8 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	mRewardLabels.clear();
 	
 	mRewardLabels.push_back("total");
-	mRewardLabels.push_back("p");
-	mRewardLabels.push_back("v");
+	// mRewardLabels.push_back("p");
+	// mRewardLabels.push_back("v");
 	this->mRewardParts.resize(mRewardLabels.size(), 0.0);
 
 	if(mRecord) mReferenceManager->setRecord();
@@ -215,8 +215,8 @@ Step()
 	skel->setPositions(p_save);
 	skel->setVelocities(v_save);
 
-	this->mAgentFeatureSet<<mCurrAgentPose,mPrevAgentPose,mPPrevAgentPose,mCurrAgentVel,mPrevAgentVel,mPPrevAgentVel, mAgentParam;
-	this->mExpertFeatureSet<<mCurrExpertPose,mPrevExpertPose,mPPrevExpertPose,mCurrExpertVel,mPrevExpertVel,mPPrevExpertVel, mExpertParam;
+	this->mAgentFeatureSet<<mCurrAgentPose,mPrevAgentPose,mCurrAgentVel,mPrevAgentVel,mAgentParam;
+	this->mExpertFeatureSet<<mCurrExpertPose,mPrevExpertPose,mCurrExpertVel,mPrevExpertVel,mExpertParam;
 
 	if(dart::math::isNan(mExpertFeatureSet)){
 		std::cout<<"NAN occurs in EXPERT feature";
@@ -408,7 +408,6 @@ ClearRecord()
 	this->mRecordBVHPosition.clear();
 	this->mRecordPhase.clear();
 	this->mRecordFootContact.clear();
-
 }
 
 std::vector<double>
@@ -492,8 +491,6 @@ GetHeadingReward()
 	// rewards.push_back(rew_v);
 		//skel->computeForwardKinematics(true,true,false);
 	return rewards;
-
-
 }
 
 std::vector<double> 
@@ -590,8 +587,8 @@ UpdateReward()
 	}
 	else {
 		mRewardParts.push_back(task_rewards[0]);
-		mRewardParts.push_back(task_rewards[1]);
-		mRewardParts.push_back(task_rewards[2]);
+		// mRewardParts.push_back(task_rewards[1]);
+		// mRewardParts.push_back(task_rewards[2]);
 	}
 }
 
@@ -603,6 +600,7 @@ projectOnVector(const Eigen::Vector3d& u, const Eigen::Vector3d& v)
 	projection = v.dot(u)/v.dot(v)*v;
 	return projection;
 }
+
 Eigen::Isometry3d
 Controller::
 getReferenceTransform()
@@ -974,26 +972,12 @@ Reset(bool RSI)
 	this->mTargetPositions.setZero();
 	this->mTargetVelocities.setZero();
 
-	Motion* p_v_target;
-	mReferenceManager->SelectMotion(0);
-	p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
-	// Eigen::VectorXd Initialpose = p_v_target->GetPosition();
-	// this->mTargetVelocities = p_v_target->GetVelocity();
-	this->mTargetPositions = p_v_target->GetPosition();
-	this->mTargetVelocities = p_v_target->GetVelocity();
-	delete p_v_target;
 
-	auto& skel = this->mCharacter->GetSkeleton();
-
-	skel->setPositions(mTargetPositions);
-	skel->setVelocities(mTargetVelocities);
-
-	this->mPrevPosition = mTargetPositions;
-	this->mPPrevPosition = mTargetPositions;
-	this->COM_prev = skel->getCOM();
 	
 	this-> motion_it = std::rand()%this->mNumMotions;
 	mReferenceManager->SelectMotion(motion_it);
+	auto& skel = this->mCharacter->GetSkeleton();
+
 	
 	skel->clearConstraintImpulses();
 	skel->clearInternalForces();
@@ -1002,6 +986,24 @@ Reset(bool RSI)
 	if(RSI) {
 		this->mCurrentFrame = (int) dart::math::Random::uniform(0.0, mReferenceManager->GetPhaseLength()-5.0);
 	}
+
+	Motion* p_v_target;
+	p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	// Eigen::VectorXd Initialpose = p_v_target->GetPosition();
+	// this->mTargetVelocities = p_v_target->GetVelocity();
+	this->mTargetPositions = p_v_target->GetPosition();
+	this->mTargetVelocities = p_v_target->GetVelocity();
+	delete p_v_target;
+
+	// this->mTargetPositions[3]=0;
+	// this->mTargetPositions[5]=0;
+	
+	skel->setPositions(mTargetPositions);
+	skel->setVelocities(mTargetVelocities);
+
+	this->mPrevPosition = mTargetPositions;
+	this->mPPrevPosition = mTargetPositions;
+	this->COM_prev = skel->getCOM();
 
 	this->mCurrentFrameOnPhase = this->mCurrentFrame;
 	this->mStartFrame = this->mCurrentFrame;
@@ -1063,7 +1065,7 @@ Reset(bool RSI)
 	this->mPrevExpertVel = this->mPrevAgentVel;
 
 
-	this-> mNumFeature = (mPrevAgentPose.rows()+mPrevAgentVel.rows())*3 + mNumMotionParam;
+	this-> mNumFeature = (mPrevAgentPose.rows()+mPrevAgentVel.rows())*2 + mNumMotionParam;
 	this-> mAgentFeatureSet.resize(mNumFeature);
 	this-> mExpertFeatureSet.resize(mNumFeature);
 	this-> mAgentFeatureSet.setZero();
@@ -1140,7 +1142,7 @@ Controller::
 SetRandomTarget(const Eigen::Vector3d& root_pos){
 	double time_min = 1;
 	double time_max = 5;
-	this->mTargetSpeed = 0.5 + (2.5-0.5) * double(std::rand()/RAND_MAX);
+	this->mTargetSpeed = 0.5 + (2.5-0.5) * double(std::rand())/RAND_MAX;
 
 	this->mMinTargetDist = 1.0;
 	this->mMaxTargetDist = 3.0;
@@ -1148,15 +1150,16 @@ SetRandomTarget(const Eigen::Vector3d& root_pos){
  	
 	std::srand(std::time(NULL));
 
-	double dist = mMinTargetDist + (mMaxTargetDist-mMinTargetDist) * double(std::rand()/RAND_MAX);
-	double theta = -M_PI + 2 * M_PI * double(std::rand()/RAND_MAX);
-	bool sharp_turn = double(std::rand()/RAND_MAX) < 0.025;
+	double dist = mMinTargetDist + (mMaxTargetDist-mMinTargetDist) * double(std::rand())/RAND_MAX;
+	double theta = -M_PI + 2 * M_PI * double(std::rand())/RAND_MAX;
+
+	bool sharp_turn = double(std::rand())/RAND_MAX < 0.025;
 	if(!sharp_turn){
 		theta = theta< M_PI/6 ? theta : M_PI/6;
 		theta = theta> -M_PI/6 ? theta : -M_PI/6;
 	}
 	this->target_pos[0] = root_pos[0] + dist * std::sin(theta);
-	this->target_pos[1] = 0.6 + (1.2-0.6) * double(std::rand()/RAND_MAX);
+	this->target_pos[1] = 0.6 + (1.2-0.6) * double(std::rand())/RAND_MAX;
 	this->target_pos[2] = root_pos[2] + dist * std::cos(theta);
 
 
