@@ -61,7 +61,6 @@ public:
 	int GetPhaseLength(int id) {return this->mMotionPhases[id]; }
 	int GetTotalFrameperMotion() {return this->mFramePerMotion;}
 	int GetDOF() {return mDOF;}
-	std::vector<double> GetContacts(double t);
 
 	// void ResetOptimizationParameters(bool reset_displacement=true);
 	void setRecord(){mRecord = true;}
@@ -100,7 +99,6 @@ protected:
 
 
 	std::vector<std::string> contact;
-	std::vector<std::vector<bool>> mContacts;
 	
 	std::vector<Motion*> mMotions_raw;
 	std::vector<Motion*> mMotions_phase;

@@ -25,21 +25,20 @@ public:
 	void initPhysicsEnv();
 
 	void Step();
+	void Reset(bool RSI);
 
 	Eigen::Isometry3d getReferenceTransform();
 	Eigen::Vector3d projectOnVector(const Eigen::Vector3d& u, const Eigen::Vector3d& v);
 	Eigen::VectorXd actuate(const Eigen::VectorXd& target_pos);
 
-	const dart::simulation::WorldPtr& GetWorld() {return mWorld;}
-	const dart::dynamics::SkeletonPtr& GetSkeleton() {return this->mCharacter->GetSkeleton();}
+
 
 	std::vector<double> GetTrackingReward(Eigen::VectorXd& position, Eigen::VectorXd& position2, 
 						Eigen::VectorXd& velocity, Eigen::VectorXd& velocity2, bool useVelocity);
 	std::vector<double> GetHeadingReward();
 	double GetParamReward();
 	void UpdateReward();
-	double GetReward() {return mRewardParts[0]; }
-	std::vector<std::string> GetRewardLabels() {return mRewardLabels; }
+
 	
 	Eigen::VectorXd GetState();
 	Eigen::VectorXd RecordPose();
@@ -47,26 +46,28 @@ public:
 	Eigen::VectorXd GetAgentFeature(){return this->mAgentFeatureSet;}
 	Eigen::VectorXd GetExpertFeature(){return this->mExpertFeatureSet;}
 	
-	//void MakeFeature(const Eigen::VectorXd& state);
-	//Eigen::VectorXd GetFeaturePair(){return this->mCurrentFeature;}
-
-	bool CheckCollisionWithGround(std::string bodyName);
 
 	void UpdateTerminalInfo();
-	void SaveStepInfo();
-	void ClearRecord();
 	bool IsTerminalState() {return this->mIsTerminal; }
 	bool IsNanAtTerminal() {return this->mIsNanAtTerminal;}
 
+	Eigen::VectorXd GetAgentParam();
+	Eigen::VectorXd GetExpertParam();
+	
 	bool FollowBvh();
-	void SetSkeletonWeight(double mass);
-	void Reset(bool RSI);
+	void SaveDisplayedData(std::string directory, bool bvh);
+	void SetRandomTarget(const Eigen::Vector3d& root_pos);
 
+
+	const dart::simulation::WorldPtr& GetWorld() {return mWorld;}
+	const dart::dynamics::SkeletonPtr& GetSkeleton() {return this->mCharacter->GetSkeleton();}
 
 	int GetNumState() { return this->mNumState;}
 	int GetNumAction() { return this->mNumAction;}
 	int GetNumFeature() { return this->mNumFeature;}
 	int GetNumPose() { return this->mNumPose;}
+	double GetReward() {return mRewardParts[0]; }
+	std::vector<std::string> GetRewardLabels() {return mRewardLabels; }
 
 	void SetAction(const Eigen::VectorXd& action){ this->mActions = action; }
 
@@ -75,23 +76,9 @@ public:
 	double GetCurrentLength() {return this->mCurrentFrame - this->mStartFrame; }
 	double GetStartFrame(){ return this->mStartFrame; }
 	int GetTerminationReason() {return terminationReason; }
-
-	Eigen::VectorXd GetPositions(int idx) { return this->mRecordPosition[idx]; }
-	Eigen::Vector3d GetCOM(int idx) { return this->mRecordCOM[idx]; }
-	Eigen::VectorXd GetVelocities(int idx) { return this->mRecordVelocity[idx]; }
-	double GetPhase(int idx) { return this->mRecordPhase[idx]; }
-	Eigen::VectorXd GetTargetPositions(int idx) { return this->mRecordTargetPosition[idx]; }
-	Eigen::VectorXd GetBVHPositions(int idx) { return this->mRecordBVHPosition[idx]; }
-	int GetRecordSize() { return this->mRecordPosition.size(); }
-	std::pair<bool, bool> GetFootContact(int idx) { return this->mRecordFootContact[idx]; }
 	std::vector<double> GetRewardByParts() {return mRewardParts; }
 
-	void SaveDisplayedData(std::string directory, bool bvh);
 
-	void SetRandomTarget(const Eigen::Vector3d& root_pos);
-
-	Eigen::VectorXd GetAgentParam();
-	Eigen::VectorXd GetExpertParam();
 
 	Eigen::Vector3d GetTargetPosition(){return this->target_pos;}
 	double GetTargetPositionLimit(){return this->mMaxTargetDist;}
@@ -121,7 +108,6 @@ protected:
 	std::vector<double> mRewardParts;
 
 	double mCurrentFrameOnPhase;
-	double mPrevFrameOnPhase;
 	double mTrackingRewardTrajectory;
 
 
@@ -132,8 +118,6 @@ protected:
 	int nTotalSteps;
 	int mInterestedDof;
 
-	double mPrevFrame;
-	Eigen::VectorXd mTlPrev;
 
 	Eigen::VectorXd mPrevTargetPositions;
 
@@ -166,19 +150,7 @@ protected:
 	int mRewardDof;
 	bool mRecord;
 
-	std::vector<Eigen::VectorXd> mRecordPosition;
-	std::vector<Eigen::VectorXd> mRecordVelocity;
-	std::vector<Eigen::Vector3d> mRecordCOM;
-	std::vector<Eigen::Vector3d> mRecordTargetPosition;
-	std::vector<Eigen::VectorXd> mRecordBVHPosition;
-	std::vector<double> mRecordPhase;
-	std::vector<std::pair<bool, bool>> mRecordFootContact;
-
-	Eigen::Vector6d mRootZero;
-	Eigen::Vector6d mDefaultRootZero;
-	Eigen::Vector3d mStartRoot; //root 0th frame
-	Eigen::Vector3d mRootZeroDiff; //root 0th frame
-	Eigen::Vector3d mStartFoot; //middle of two feet at 0th frame
+	Eigen::Vector3d mStartRoot; //middle of two feet at 0th frame
 
 	int motion_it;
 

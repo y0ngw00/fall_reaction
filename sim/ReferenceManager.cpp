@@ -25,7 +25,6 @@ ReferenceManager(Character* character)
 	motion_type.clear();
 
 	contact.clear();
-	mContacts.clear();
 	contact.push_back("RightToe");
 	contact.push_back("RightFoot");
 	contact.push_back("LeftToe");
@@ -94,9 +93,13 @@ LoadMotionFromBVH(std::string filename)
 	std::cout<<"The Number of Motion Files : "<<motion_list.size()<<std::endl;
 	this->mNumMotions=motion_list.size();
 	this->mMotionPhases.resize(mNumMotions);
+	this->mMotionPhases.setZero();
 
 	int it=0;
 	int num_pose =0;
+
+	std::map<std::string,std::string> bvhMap = mCharacter->GetSkelMap(); 
+
 	for(auto p :motion_list){
 		
 		mMotions_raw.clear();
@@ -113,7 +116,7 @@ LoadMotionFromBVH(std::string filename)
 		std::cout << "load trained data from: " << path << std::endl;
 
 		int dof = this->mDOF;
-		std::map<std::string,std::string> bvhMap = mCharacter->GetSkelMap(); 
+		
 		for(auto jnt :bvhMap){
 			bvh->AddMapping(jnt.first,jnt.second);  //first = xml body node, second = bvh node
 		}
@@ -124,13 +127,8 @@ LoadMotionFromBVH(std::string filename)
 		for(int i = 0; i < bvh->GetNumFrames(); i++)
 		{
 			Eigen::VectorXd pos = Eigen::VectorXd::Zero(dof);
-			//Eigen::VectorXd p1 = Eigen::VectorXd::Zero(dof);
-
 			//Set p
-
-
 			bvh->SetMotion(t);
-
 
 			for(auto jnt :bvhMap)
 			{
@@ -149,7 +147,7 @@ LoadMotionFromBVH(std::string filename)
 				//The joint is a ball joint or free joint,
 				if(dynamic_cast<dart::dynamics::BallJoint*>(jn)!=nullptr
 					|| dynamic_cast<dart::dynamics::FreeJoint*>(jn)!=nullptr){
-					pos.block<3,1>(jn->getIndexInSkeleton(0),0) = a;  // insert euler angles of the joint
+					pos.segment<3>(jn->getIndexInSkeleton(0)) = a;  // insert euler angles of the joint
 				}
 
 
@@ -169,7 +167,7 @@ LoadMotionFromBVH(std::string filename)
 			}
 
 
-			pos.block<3,1>(3,0) = bvh->GetRootCOM();  		// Insert COM position 
+			pos.segment<3>(3) = bvh->GetRootCOM();  		// Insert COM position 
 			Eigen::VectorXd v;
 
 			if(t != 0)
@@ -203,7 +201,6 @@ LoadMotionFromBVH(std::string filename)
 				c.push_back(p[1] < 0.04);
 			}
 
-			mContacts.push_back(c);
 
 			t += bvh->GetTimestep();
 
@@ -217,11 +214,6 @@ LoadMotionFromBVH(std::string filename)
 
 		for(int i = 0; i < mPhaseLength; i++) {
 			mMotions_phase.push_back(new Motion(mMotions_raw[i]));
-			if(i != 0 && i != mPhaseLength - 1) {
-				for(int j = 0; j < contact.size(); j++)
-					if(mContacts[i-1][j] && mContacts[i+1][j] && !mContacts[i][j])
-							mContacts[i][j] = true;
-			}
 		 }
 		 
 		delete bvh;
@@ -404,35 +396,6 @@ GetPosition(double t)
 		return (*p_gen)[k0]->GetPosition();
 	else
 		return DPhy::BlendPosition((*p_gen)[k1]->GetPosition(), (*p_gen)[k0]->GetPosition(), 1 - (t-k0));	
-}
-std::vector<double> 
-ReferenceManager::
-GetContacts(double t)
-{
-	std::vector<double> result;
-	int k0 = (int) std::floor(t);
-	int k1 = (int) std::ceil(t);	
-
-	if (k0 == k1) {
-		int phase = k0 % mPhaseLength;
-		std::vector<bool> contact = mContacts[phase];
-		for(int i = 0; i < contact.size(); i++)
-			result.push_back(contact[i]);
-	} else {
-		int phase0 = k0 % mPhaseLength;
-		int phase1 = k1 % mPhaseLength;
-
-		std::vector<bool> contact0 = mContacts[phase0];
-		std::vector<bool> contact1 = mContacts[phase1];
-		for(int i = 0; i < contact0.size(); i++) {
-			if(contact0[i] == contact1[i])
-				result.push_back(contact0[i]);
-			else 
-				result.push_back(0.5);
-		}
-
-	}
-	return result;
 }
 
 double 
