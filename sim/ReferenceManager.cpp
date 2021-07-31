@@ -173,7 +173,7 @@ LoadMotionFromBVH(std::string filename)
 			if(t != 0)
 			{
 				//
-				v = skel->getPositionDifferences(pos, mMotions_raw.back()->GetPosition()) / 0.033;
+				v = skel->getPositionDifferences(pos, mMotions_raw.back().GetPosition()) / 0.033;
 				for(auto& jn : skel->getJoints()){
 					if(dynamic_cast<dart::dynamics::RevoluteJoint*>(jn)!=nullptr){
 						double v_ = v[jn->getIndexInSkeleton(0)];
@@ -186,9 +186,9 @@ LoadMotionFromBVH(std::string filename)
 						v[jn->getIndexInSkeleton(0)] = v_;
 					}
 				}
-				mMotions_raw.back()->SetVelocity(v);
+				mMotions_raw.back().SetVelocity(v);
 			}
-			mMotions_raw.push_back(new Motion(pos, Eigen::VectorXd(pos.rows())));
+			mMotions_raw.push_back(Motion(pos, Eigen::VectorXd(pos.rows())));
 			
 			skel->setPositions(pos);
 			//skel->computeForwardKinematics(true,false,false);
@@ -206,14 +206,14 @@ LoadMotionFromBVH(std::string filename)
 
 		}
 
-		mMotions_raw.back()->SetVelocity(mMotions_raw.front()->GetVelocity());
+		mMotions_raw.back().SetVelocity(mMotions_raw.front().GetVelocity());
 
 		mPhaseLength = mMotions_raw.size();
 		mTimeStep = bvh->GetTimestep();
 		this->mMotionPhases[it]=mPhaseLength;
 
 		for(int i = 0; i < mPhaseLength; i++) {
-			mMotions_phase.push_back(new Motion(mMotions_raw[i]));
+			mMotions_phase.push_back(Motion(mMotions_raw[i]));
 		 }
 		 
 		delete bvh;
@@ -229,33 +229,33 @@ LoadMotionFromBVH(std::string filename)
 
 void 
 ReferenceManager::
-GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_phase, std::vector<std::vector<Motion*>>& p_container)
+GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion>& p_phase, std::vector<std::vector<Motion>>& p_container)
 {
 	mLock.lock();
-	std::vector<Motion*> p_gen;
+	std::vector<Motion> p_gen;
 
 	// p_gen clear?
-	while(!p_gen.empty()){
-		Motion* m = p_gen.back();
-		p_gen.pop_back();
-		delete m;
-	}		
+	// while(!p_gen.empty()){
+	// 	Motion m = p_gen.back();
+	// 	p_gen.pop_back();
+	// 	delete m;
+	// }		
 
 	dart::dynamics::SkeletonPtr skel = mCharacter->GetSkeleton();
 
 	Eigen::VectorXd p_save = skel->getPositions();
 	Eigen::VectorXd v_save = skel->getVelocities();
 	
-	skel->setPositions(p_phase[0]->GetPosition());
+	skel->setPositions(p_phase[0].GetPosition());
 	skel->computeForwardKinematics(true,false,false);
 
 	Eigen::Vector3d p0_footl = skel->getBodyNode("LeftFoot")->getWorldTransform().translation();
 	Eigen::Vector3d p0_footr = skel->getBodyNode("RightFoot")->getWorldTransform().translation();
 
 	//Start pose
-	Eigen::Isometry3d T0_phase = dart::dynamics::FreeJoint::convertToTransform(p_phase[0]->GetPosition().head<6>());
+	Eigen::Isometry3d T0_phase = dart::dynamics::FreeJoint::convertToTransform(p_phase[0].GetPosition().head<6>());
 	//End pose
-	Eigen::Isometry3d T1_phase = dart::dynamics::FreeJoint::convertToTransform(p_phase.back()->GetPosition().head<6>());
+	Eigen::Isometry3d T1_phase = dart::dynamics::FreeJoint::convertToTransform(p_phase.back().GetPosition().head<6>());
 
 	Eigen::Isometry3d T0_gen = T0_phase;
 	
@@ -273,19 +273,19 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_p
 	 	int phase = i % mPhaseLength;
 		
 	 	if(i < mPhaseLength) {
-	 		p_gen.push_back(new Motion(p_phase[i]));
+	 		p_gen.push_back(Motion(p_phase[i]));
 	 	} 
 	 	else {
 	 		Eigen::VectorXd pos;
 			if(phase == 0) { //The End of unit motion
 				std::vector<std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>> constraints;
 				
-				skel->setPositions(p_gen.back()->GetPosition());
+				skel->setPositions(p_gen.back().GetPosition());
 				//skel->computeForwardKinematics(true,false,false);
 
 				// Align the orientation of next motion
-				Eigen::VectorXd p = p_phase[phase]->GetPosition();
-				p.segment<3>(3) = p_gen.back()->GetPosition().segment<3>(3);
+				Eigen::VectorXd p = p_phase[phase].GetPosition();
+				p.segment<3>(3) = p_gen.back().GetPosition().segment<3>(3);
 				skel->setPositions(p);
 				//skel->computeForwardKinematics(true,false,false);
 
@@ -294,7 +294,7 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_p
 
 			} 
 			else { 
-				pos = p_phase[phase]->GetPosition();
+				pos = p_phase[phase].GetPosition();
 				Eigen::Isometry3d T_current = dart::dynamics::FreeJoint::convertToTransform(pos.head<6>());
 				// The orientation displacement to blend
 				Eigen::Isometry3d T0_phase_gen = T0_gen* T0_phase.inverse();
@@ -318,18 +318,18 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_p
 				pos.head<6>() = dart::dynamics::FreeJoint::convertToPositions(T_current);
 			}
 
-			Eigen::VectorXd vel = skel->getPositionDifferences(pos, p_gen.back()->GetPosition()) / 0.033;
-			p_gen.back()->SetVelocity(vel);
-			p_gen.push_back(new Motion(pos, vel));
+			Eigen::VectorXd vel = skel->getPositionDifferences(pos, p_gen.back().GetPosition()) / 0.033;
+			p_gen.back().SetVelocity(vel);
+			p_gen.push_back(Motion(pos, vel));
 
 			// No blending 
 			if(blend && phase == 0) {
 				for(int j = mBlendingInterval; j > 0; j--) {
 					double weight = 1.0 - j / (double)(mBlendingInterval+1);
-					Eigen::VectorXd oldPos = p_gen[i - j]->GetPosition();
-					p_gen[i - j]->SetPosition(DPhy::BlendPosition(oldPos, pos, weight));
-					vel = skel->getPositionDifferences(p_gen[i - j]->GetPosition(), p_gen[i - j - 1]->GetPosition()) / 0.033;
-			 		p_gen[i - j - 1]->SetVelocity(vel);
+					Eigen::VectorXd oldPos = p_gen[i - j].GetPosition();
+					p_gen[i - j].SetPosition(DPhy::BlendPosition(oldPos, pos, weight));
+					vel = skel->getPositionDifferences(p_gen[i - j].GetPosition(), p_gen[i - j - 1].GetPosition()) / 0.033;
+			 		p_gen[i - j - 1].SetVelocity(vel);
 				}
 			}
 		}
@@ -348,54 +348,43 @@ SelectMotion(int i){
 }
 
 
-Motion*
+Motion
 ReferenceManager::
 GetMotion(double t)
 {
-	std::vector<Motion*>* p_gen;
-
-
-	p_gen = &mMotions_gen;
-
 
 	dart::dynamics::SkeletonPtr skel = mCharacter->GetSkeleton();
 
 	if(mMotions_gen.size()-1 < t) {
-	 	return new Motion((*p_gen).back()->GetPosition(), (*p_gen).back()->GetVelocity());
+	 	return mMotions_gen.back();
 	}
 	
 	int k0 = (int) std::floor(t);
 	int k1 = (int) std::ceil(t);	
 
 	if (k0 == k1)
-		return new Motion((*p_gen)[k0]);
+		return mMotions_gen[k0];
 	else {
-		return new Motion(DPhy::BlendPosition((*p_gen)[k1]->GetPosition(), (*p_gen)[k0]->GetPosition(), 1 - (t-k0)), 
-				DPhy::BlendVelocity((*p_gen)[k1]->GetVelocity(), (*p_gen)[k0]->GetVelocity(), 1 - (t-k0)));		
+		return Motion(DPhy::BlendPosition((mMotions_gen)[k1].GetPosition(), (mMotions_gen)[k0].GetPosition(), 1 - (t-k0)), 
+				DPhy::BlendVelocity((mMotions_gen)[k1].GetVelocity(), (mMotions_gen)[k0].GetVelocity(), 1 - (t-k0)));		
 	}
 }
 Eigen::VectorXd 
 ReferenceManager::
 GetPosition(double t) 
 {
-	std::vector<Motion*>* p_gen;
-
-
-	p_gen = &mMotions_gen;
-
-
 	auto& skel = mCharacter->GetSkeleton();
 
-	if((*p_gen).size()-1 < t) {
-	 	return (*p_gen).back()->GetPosition();
+	if((mMotions_gen).size()-1 < t) {
+	 	return (mMotions_gen).back().GetPosition();
 	}
 	
 	int k0 = (int) std::floor(t);
 	int k1 = (int) std::ceil(t);	
 	if (k0 == k1)
-		return (*p_gen)[k0]->GetPosition();
+		return (mMotions_gen)[k0].GetPosition();
 	else
-		return DPhy::BlendPosition((*p_gen)[k1]->GetPosition(), (*p_gen)[k0]->GetPosition(), 1 - (t-k0));	
+		return DPhy::BlendPosition((mMotions_gen)[k1].GetPosition(), (mMotions_gen)[k0].GetPosition(), 1 - (t-k0));	
 }
 
 double 

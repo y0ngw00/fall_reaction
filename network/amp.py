@@ -26,6 +26,7 @@ import scipy.integrate as integrate
 import types
 
 #define 
+import tracemalloc
 
 np.set_printoptions(threshold=sys.maxsize)
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
@@ -84,7 +85,7 @@ class AMP(object):
 			self.RMS.setNumStates(self.num_state)
 
 	def initTrain(self, name, env, pretrain="", directory=None, 
-		batch_size=256, batch_size_disc=64, steps_per_iteration=4096, num_buffer=10000,optim_frequency=1):
+		batch_size=256, batch_size_disc=64, steps_per_iteration=2048, num_buffer=100000,optim_frequency=1):
 
 		self.name = name
 		self.directory = directory
@@ -399,6 +400,10 @@ class AMP(object):
 		self.lossvals.append(['loss actor', lossval_ac / 5])
 		self.lossvals.append(['loss critic', lossval_c/ 5])
 
+		if(self.expert_buffer.get_current_size() >10000 or self.agent_buffer.get_current_size()>10000):
+			self.expert_buffer.clear()
+			self.agent_buffer.clear()
+
 	def computeTDandGAE(self, tuples):
 		state_batch = []
 		action_batch = []
@@ -510,10 +515,9 @@ class AMP(object):
 
 
 	def train(self, num_iteration):
-		epi_info_iter = []
-
-		agent_container=[]
-		expert_container = []
+		
+		snapshot = tracemalloc.take_snapshot()
+		
 		it_cur = 0
 
 		for it in range(num_iteration):
@@ -522,6 +526,10 @@ class AMP(object):
 			states = self.env.getStates()
 			local_step = 0
 			last_print = 0
+
+			epi_info_iter = []
+			agent_container=[]
+			expert_container = []
 
 			epi_info = [[] for _ in range(self.num_slaves)]	
 
@@ -585,10 +593,19 @@ class AMP(object):
 				if self.directory is not None and self.reward_max < summary['r_per_e']:
 					self.reward_max = summary['r_per_e']
 					self.env.RMS.save(self.directory+'rms-rmax')
+					self.env.RMS_disc.save(self.directory+'disc-rms-rmax')
 
 					os.system("cp {}/network-{}.data-00000-of-00001 {}/network-rmax.data-00000-of-00001".format(self.directory, 0, self.directory))
 					os.system("cp {}/network-{}.index {}/network-rmax.index".format(self.directory, 0, self.directory))
 					os.system("cp {}/network-{}.meta {}/network-rmax.meta".format(self.directory, 0, self.directory))
+
+			if it_cur % 100 == 1:
+
+				snapshot2 = tracemalloc.take_snapshot()
+				top_stats = snapshot2.compare_to(snapshot,'lineno')
+				print("[Top 10 differences]")
+				for stat in top_stats[:10]:
+					print(stat)
 
 	def run(self, state):
 		state = np.reshape(state, (1, self.num_state))
@@ -625,6 +642,8 @@ if __name__=="__main__":
 		env = Monitor(ref=args.ref, num_slaves=args.nslaves, directory=directory, plot=args.plot)
 	else:
 		env = Monitor(ref=args.ref, num_slaves=args.nslaves, directory=directory, plot=args.plot)
+
+	tracemalloc.start()
 	amp = AMP()
 	amp.initTrain(env=env, name=args.test_name, directory=directory, pretrain=args.pretrain)
 	amp.train(args.ntimesteps)

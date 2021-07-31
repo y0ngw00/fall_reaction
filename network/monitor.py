@@ -222,7 +222,10 @@ class Monitor(object):
 		self.num_transitions_per_iteration = 0
 		self.rewards_per_iteration = 0
 		self.rewards_by_part_per_iteration = []
+
 		self.total_frames_elapsed = 0
+		# self.transition_per_episodes=[]
+		# 		self.total_rewards_by_parts = []
 
 		summary = dict()
 		summary['r_per_e'] = r_per_e

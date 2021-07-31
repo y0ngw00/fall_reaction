@@ -11,7 +11,6 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 {
 	initPhysicsEnv();
 
-	this->mRescaleParameter = std::make_tuple(1.0, 1.0, 1.0);
 	this->mRecord = record;
 	this->mReferenceManager = ref;
 	this->mNumMotions = mReferenceManager->GetNumMotions();
@@ -45,14 +44,6 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	mInterestedDof = mCharacter->GetSkeleton()->getNumDofs()-6;
 	mRewardDof = mCharacter->GetSkeleton()->getNumDofs();
 
-	auto collisionEngine = mWorld->getConstraintSolver()->getCollisionDetector();
-	this->mCGL = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("LeftFoot"));
-	this->mCGR = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("RightFoot"));
-	this->mCGEL = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("LeftToe"));
-	this->mCGER = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("RightToe"));
-	this->mCGHL = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("LeftHand"));
-	this->mCGHR = collisionEngine->createCollisionGroup(this->mCharacter->GetSkeleton()->getBodyNode("RightHand"));
-	this->mCGG = collisionEngine->createCollisionGroup(this->mGround.get());
 	int num_body_nodes = mInterestedDof / 3;
 	int dof = this->mCharacter->GetSkeleton()->getNumDofs(); 
 
@@ -64,8 +55,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	mMotionType.push_back("idle");
 	mMotionType.push_back("walk");
 	mMotionType.push_back("jump");
-	mControlObjective.resize(3);
-	
+
 
 	mEndEffectors.clear();
 	mEndEffectors.push_back("RightFoot");
@@ -76,9 +66,6 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 
 	this->mTargetPositions = Eigen::VectorXd::Zero(dof);
 	this->mTargetVelocities = Eigen::VectorXd::Zero(dof);
-
-	// this->mPDTargetPositions = Eigen::VectorXd::Zero(dof);
-	// this->mPDTargetVelocities = Eigen::VectorXd::Zero(dof);
 
 	//temp
 	this->mNumState = this->GetState().rows();
@@ -91,6 +78,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	this->mNumPose = this->mReferenceManager->GetNumPose();
 
 	mRewardLabels.clear();
+	
 	mRewardLabels.push_back("total");
 	// mRewardLabels.push_back("p");
 	// mRewardLabels.push_back("v");
@@ -136,7 +124,6 @@ Step()
 	}	
 
 	this->mCurrentFrame+=1;
-	this->mCurrentFrameOnPhase+=1;
 	nTotalSteps += 1;
 	int n_bnodes = mCharacter->GetSkeleton()->getNumBodyNodes();
 
@@ -175,10 +162,10 @@ Step()
 		Eigen::VectorXd v_save = skel->getVelocities();
 
 
-		Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
-		Eigen::VectorXd p_ref = p_v_target->GetPosition();
-		Eigen::VectorXd v_ref = p_v_target->GetVelocity();
-		delete p_v_target;
+		Motion p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+		Eigen::VectorXd p_ref = p_v_target.GetPosition();
+		Eigen::VectorXd v_ref = p_v_target.GetVelocity();
+
 
 		skel->setPositions(p_ref);
 		skel->setVelocities(v_ref);
@@ -536,7 +523,8 @@ UpdateReward()
 	std::vector<double> task_rewards = this->GetHeadingReward();
 	// double accum_bvh = std::accumulate(tracking_rewards_bvh.begin(), tracking_rewards_bvh.end(), 0.0) / tracking_rewards_bvh.size();
 
-	mRewardParts.clear();
+	this->mRewardParts.resize(mRewardLabels.size(), 0.0);
+	this->mRewardParts.clear();
 	// double r_tot = 0.95 * (tracking_rewards_bvh[0] * tracking_rewards_bvh[1] *tracking_rewards_bvh[2] * tracking_rewards_bvh[3])  + 0.05 * tracking_rewards_bvh[4];
 	if(dart::math::isNan(task_rewards[0])){
 		mRewardParts.resize(mRewardLabels.size(), 0.0);
@@ -712,7 +700,7 @@ GetState()
 	// 		Eigen::Isometry3d transform = cur_root_inv * skel->getBodyNode(mEndEffectors[i])->getWorldTransform();
 	// 		ee.segment<3>(3*i) << transform.translation();
 	// 	}
-	// 	double t = mReferenceManager->GetTimeStep(mCurrentFrameOnPhase);
+	// 	double t = mReferenceManager->GetTimeStep(mCurrentFrame);
 
 	// 	Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame+t);
 	// 	Eigen::VectorXd p_now = p_v_target->GetPosition();
@@ -740,7 +728,7 @@ GetState()
 Eigen::VectorXd
 Controller::
 RecordPose(){
-	auto& skel = this->mCharacter->GetSkeleton();
+	auto &skel = this->mCharacter->GetSkeleton();
 
 	Eigen::Isometry3d T_ref = this->getReferenceTransform();
 	Eigen::Isometry3d T_ref_inv = T_ref.inverse();
@@ -843,8 +831,8 @@ GetExpertParam(){
 	Eigen::VectorXd p_save = skel->getPositions();
 
 	int n1 = mCurrentFrame-1 > 0 ? mCurrentFrame-1 : mCurrentFrame;
-	Motion* p_v_target = mReferenceManager->GetMotion(n1);
-	Eigen::VectorXd p_ref = p_v_target->GetPosition();
+	Motion p_v_target = mReferenceManager->GetMotion(n1);
+	Eigen::VectorXd p_ref = p_v_target.GetPosition();
 	skel->setPositions(p_ref);
 
 	Eigen::Isometry3d T_ref = this->getReferenceTransform();
@@ -855,12 +843,11 @@ GetExpertParam(){
 
 	int n0 = n1-1 > 0 ? n1-1 : n1;
 	p_v_target = mReferenceManager->GetMotion(n0);
-	p_ref = p_v_target->GetPosition();
+	p_ref = p_v_target.GetPosition();
 	skel->setPositions(p_ref);
 
 	Eigen::Vector3d v_com0 = R_ref_inv*skel->getCOMLinearVelocity();
 	
-	delete p_v_target;
 
 	skel->setPositions(p_save);
 	Eigen::Vector3d v_com2 = R_ref_inv*skel->getCOMLinearVelocity();
@@ -885,10 +872,9 @@ FollowBvh()
 		return false;
 	auto& skel = mCharacter->GetSkeleton();
 
-	Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
-	mTargetPositions = p_v_target->GetPosition();
-	mTargetVelocities = p_v_target->GetVelocity();
-	delete p_v_target;
+	Motion p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	mTargetPositions = p_v_target.GetPosition();
+	mTargetVelocities = p_v_target.GetVelocity();
 
 	for(int i=0;i<this->mSimPerCon;i++)
 	{
@@ -921,11 +907,9 @@ Reset(bool RSI)
 		this->mCurrentFrame = (int) dart::math::Random::uniform(0.0, mReferenceManager->GetPhaseLength()-5.0);
 	}
 
-	Motion* p_v_target;
-	p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
-	this->mTargetPositions = p_v_target->GetPosition();
-	this->mTargetVelocities = p_v_target->GetVelocity();
-	delete p_v_target;
+	Motion p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
+	this->mTargetPositions = p_v_target.GetPosition();
+	this->mTargetVelocities = p_v_target.GetVelocity();
 
 	skel->setPositions(mTargetPositions);
 	skel->setVelocities(mTargetVelocities);
@@ -939,15 +923,15 @@ Reset(bool RSI)
 	this->mTimeElapsed = 0;
 
 
-	this->mPPrevAgentPose.resize(3*3*n + mEndEffectors.size()*3);
-	this->mPPrevAgentVel.resize(2*3*n);
 	this->mPPrevAgentPose.setZero();
 	this->mPPrevAgentVel.setZero();
+	this->mPPrevAgentPose.resize(3*3*n + mEndEffectors.size()*3);
+	this->mPPrevAgentVel.resize(2*3*n);
 
-	this->mPrevAgentPose.resize(3*3*n + mEndEffectors.size()*3);
-	this->mPrevAgentVel.resize(2*3*n);
 	this->mPrevAgentPose.setZero();
 	this->mPrevAgentVel.setZero();
+	this->mPrevAgentPose.resize(3*3*n + mEndEffectors.size()*3);
+	this->mPrevAgentVel.resize(2*3*n);
 
 	this->mPrevAgentPose = RecordPose();
 	this->mPrevAgentVel = RecordVel();
@@ -962,10 +946,11 @@ Reset(bool RSI)
 
 
 	this-> mNumFeature = (mPrevAgentPose.rows()+mPrevAgentVel.rows())*2 + mNumMotionParam;
-	this-> mAgentFeatureSet.resize(mNumFeature);
-	this-> mExpertFeatureSet.resize(mNumFeature);
 	this-> mAgentFeatureSet.setZero();
 	this-> mExpertFeatureSet.setZero();
+	this-> mAgentFeatureSet.resize(mNumFeature);
+	this-> mExpertFeatureSet.resize(mNumFeature);
+
 
 	this->mIsNanAtTerminal = false;
 	this->mIsTerminal = false;

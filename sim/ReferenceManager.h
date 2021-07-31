@@ -18,9 +18,9 @@ namespace DPhy
 class Motion
 {
 public:
-	Motion(Motion* m) {
-		position = m->position;
-		velocity = m->velocity;
+	Motion(const Motion& m) {
+		position = m.position;
+		velocity = m.velocity;
 	}
 	Motion(Eigen::VectorXd pos) {
 		position = pos;
@@ -49,11 +49,11 @@ public:
 	void LoadMotionFromBVH(std::string filename);
 	void LoadMotionPairFromBVH(std::string filename);
 	int GetMotionIndex(std::string motion_name);
-	void GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion*>& p_phase, std::vector<std::vector<Motion*>>& p_container);
+	void GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion>& p_phase, std::vector<std::vector<Motion>>& p_container);
 	void SelectMotion(int i);
 	int GetNumMotions() {return this->mNumMotions;}
-	Motion* GetMotion(double t);
-	std::vector<Motion*> GetMotions(int id){return this->mMotions_container[id]; }
+	Motion GetMotion(double t);
+	std::vector<Motion> GetMotions(int id){return this->mMotions_container[id]; }
 
 	Eigen::VectorXd GetPosition(double t);
 	double GetTimeStep(double t);
@@ -100,11 +100,11 @@ protected:
 
 	std::vector<std::string> contact;
 	
-	std::vector<Motion*> mMotions_raw;
-	std::vector<Motion*> mMotions_phase;
-	std::vector<Motion*> mMotions_gen;
-	std::vector<std::vector<Motion*>> mMotions_container;
-	std::vector<Motion*> mMotions_gen_adaptive;
+	std::vector<Motion> mMotions_raw;
+	std::vector<Motion> mMotions_phase;
+	std::vector<Motion> mMotions_gen;
+	std::vector<std::vector<Motion>> mMotions_container;
+	std::vector<Motion> mMotions_gen_adaptive;
 
 
 	int mNumPose;

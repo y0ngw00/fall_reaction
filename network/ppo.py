@@ -19,6 +19,8 @@ from tensorflow.python import pywrap_tensorflow
 import scipy.integrate as integrate
 import types
 
+import tracemalloc
+
 np.set_printoptions(threshold=sys.maxsize)
 tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 os.environ['CUDA_VISIBLE_DEVICES'] = ''

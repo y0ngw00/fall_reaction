@@ -38,7 +38,6 @@ public:
 	std::vector<double> GetHeadingReward();
 	double GetParamReward();
 	void UpdateReward();
-
 	
 	Eigen::VectorXd GetState();
 	Eigen::VectorXd RecordPose();
@@ -46,7 +45,6 @@ public:
 	Eigen::VectorXd GetAgentFeature(){return this->mAgentFeatureSet;}
 	Eigen::VectorXd GetExpertFeature(){return this->mExpertFeatureSet;}
 	
-
 	void UpdateTerminalInfo();
 	bool IsTerminalState() {return this->mIsTerminal; }
 	bool IsNanAtTerminal() {return this->mIsNanAtTerminal;}
@@ -119,8 +117,6 @@ protected:
 	int mInterestedDof;
 
 
-	Eigen::VectorXd mPrevTargetPositions;
-
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
 
@@ -128,23 +124,16 @@ protected:
 	Eigen::VectorXd mPrevPosition;
 	Eigen::VectorXd COM_prev;
 
-	Eigen::VectorXd mPDTargetPositions;
-	Eigen::VectorXd mPDTargetVelocities;
-
 	double mMass;
 	bool mIsTerminal;
 	bool mIsNanAtTerminal;
 	int terminationReason;
 
-	std::tuple<double, double, double> mRescaleParameter;
 	std::vector<std::string> mContacts;
 	std::vector<std::string> mEndEffectors;
 	std::vector<std::string> mMotionType;
 	std::vector<std::string> mRewardLabels;
 
-	Eigen::VectorXd mControlObjective;
-
-	std::unique_ptr<dart::collision::CollisionGroup> mCGEL, mCGER, mCGL, mCGR, mCGG, mCGHR, mCGHL, mCGOBJ; 
 
 	double mAdaptiveStep;
 	int mRewardDof;
