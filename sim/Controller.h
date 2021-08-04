@@ -49,12 +49,12 @@ public:
 	bool IsTerminalState() {return this->mIsTerminal; }
 	bool IsNanAtTerminal() {return this->mIsNanAtTerminal;}
 
-	Eigen::VectorXd GetAgentParam();
+	Eigen::VectorXd GetAgentParam(const Eigen::Matrix3d R_ref_inv);
 	Eigen::VectorXd GetExpertParam();
 	
-	bool FollowBvh();
 	void SaveDisplayedData(std::string directory, bool bvh);
-	void SetRandomTarget(const Eigen::Vector3d& root_pos);
+	void SetParam(const float new_theta, const float new_height, const float new_speed);
+	void SetTarget(const Eigen::Vector3d& root_pos, bool random);
 
 
 	const dart::simulation::WorldPtr& GetWorld() {return mWorld;}
@@ -78,7 +78,7 @@ public:
 
 
 
-	Eigen::Vector3d GetTargetPosition(){return this->target_pos;}
+	Eigen::Vector3d GetTargetPosition(){return this->target_dir;}
 	double GetTargetPositionLimit(){return this->mMaxTargetDist;}
 	double GetAccessThreshold(){return this->dist_threshold;}
 	double GetTargetSpeed(){return this->mTargetSpeed;}
@@ -120,9 +120,9 @@ protected:
 	Eigen::VectorXd mTargetPositions;
 	Eigen::VectorXd mTargetVelocities;
 
-	Eigen::VectorXd mPPrevPosition;
-	Eigen::VectorXd mPrevPosition;
-	Eigen::VectorXd COM_prev;
+	Eigen::Vector3d mPPrevCOMvel;
+	Eigen::Vector3d mPrevCOMvel;
+	Eigen::Vector3d COM_prev;
 
 	double mMass;
 	bool mIsTerminal;
@@ -162,7 +162,14 @@ protected:
 
 
 	double target_speed;
-	Eigen::Vector3d target_pos;
+	Eigen::Vector3d target_dir;
+
+	float theta;
+	float theta_prev;
+
+	Eigen::Matrix3d target_rot;
+	float height;
+	float speed;
 
 	double max_dist;
 	double mMinTargetDist;

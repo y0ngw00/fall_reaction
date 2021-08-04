@@ -26,7 +26,7 @@ Controller::Controller(ReferenceManager* ref, std::string character_path, bool r
 	
 	this->mCurrentFrame = 0;
 	this->motion_it=0;
- 	this->target_pos = {0,0,1};
+ 	this->target_dir = {0,0,1};
 
 
 	Eigen::VectorXd kp(this->mCharacter->GetSkeleton()->getNumDofs());
@@ -111,6 +111,10 @@ Step()
 		return;
 	}
 
+	Eigen::Isometry3d T_ref = this->getReferenceTransform();
+	Eigen::Isometry3d T_ref_inv = T_ref.inverse();
+	Eigen::Matrix3d R_ref_inv = T_ref_inv.linear();
+
 	int num_body_nodes = mInterestedDof / 3;
 	int dof = this->mCharacter->GetSkeleton()->getNumDofs(); 
 
@@ -127,12 +131,6 @@ Step()
 	nTotalSteps += 1;
 	int n_bnodes = mCharacter->GetSkeleton()->getNumBodyNodes();
 
-	//Motion* p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
-	//Eigen::VectorXd p_now = p_v_target->GetPosition();
-	//this->mTargetPositions = p_now ; //p_v_target->GetPosition();
-	//this->mTargetVelocities = mCharacter->GetSkeleton()->getPositionDifferences(mTargetPositions, mPrevTargetPositions) / 0.033;
-	//mPrevTargetPositions = mTargetPositions;
-	//delete p_v_target;
 
 	Eigen::VectorXd torque;
 	Eigen::VectorXd PDTargetPosition = Eigen::VectorXd::Zero(dof);
@@ -153,9 +151,12 @@ Step()
 	}
 
 	if(!mRecord){
+
+
+
 		Eigen::VectorXd mCurrAgentPose = RecordPose();
 		Eigen::VectorXd mCurrAgentVel = RecordVel();
-		Eigen::VectorXd mAgentParam = GetAgentParam();
+		Eigen::VectorXd mAgentParam = GetAgentParam(R_ref_inv);
 
 		auto& skel = this->mCharacter->GetSkeleton();
 		Eigen::VectorXd p_save = skel->getPositions();
@@ -175,6 +176,8 @@ Step()
 		Eigen::VectorXd mCurrExpertVel = RecordVel();
 		Eigen::VectorXd mExpertParam = GetExpertParam();
 
+
+
 		// Eigen::VectorXd mMotionClass(this->mNumMotionType);
 		// mMotionClass.setZero();
 		// std::string type = this->mReferenceManager->GetMotionType(this->motion_it);
@@ -186,6 +189,8 @@ Step()
 
 		skel->setPositions(p_save);
 		skel->setVelocities(v_save);
+
+		// this->mPPrevCOMvel = this->mPrevCOMvel;
 
 
 
@@ -217,13 +222,8 @@ Step()
 			std::cout<<mAgentFeatureSet.transpose()<<std::endl;
 		}
 
-		this->mPPrevPosition = this->mPrevPosition;
-		this->mPrevPosition = p_save;
 
-		this->mPPrevAgentPose = mPrevAgentPose;
-		this->mPPrevAgentVel = mPrevAgentVel;
-		this->mPPrevExpertPose = mPrevExpertPose;
-		this->mPPrevExpertVel = mPrevExpertVel;
+		this->mPrevCOMvel = skel->getCOMLinearVelocity();
 
 		this->mPrevAgentPose = mCurrAgentPose;
 		this->mPrevAgentVel = mCurrAgentVel;
@@ -239,10 +239,24 @@ Step()
 
 	this->UpdateReward();
 	this->UpdateTerminalInfo();
+	
+	this->target_dir = this->mCharacter->GetSkeleton()->getCOMLinearVelocity();
+	this->target_dir[1]=0;
+	this->target_dir = this->target_rot*target_dir;
 
-	if((int)this->mCurrentFrame % 120 ==0){
+	if(mRecord){
 		Eigen::Vector3d com = mCharacter->GetSkeleton()->getCOM();
-		SetRandomTarget(com);
+		if(this->theta!= this->theta_prev)
+			SetTarget(com, !mRecord);
+		theta_prev = theta;
+	}
+
+	else{
+		if((int)this->nTotalSteps % 120 ==0){
+			Eigen::Vector3d com = mCharacter->GetSkeleton()->getCOM();
+			SetTarget(com, !mRecord);
+		}
+		
 	}
 
 
@@ -282,7 +296,6 @@ void
 Controller::
 UpdateTerminalInfo()
 {	
-	Eigen::VectorXd p_ideal = mTargetPositions;
 	auto& skel = this->mCharacter->GetSkeleton();
 
 	Eigen::VectorXd p = skel->getPositions();
@@ -294,8 +307,6 @@ UpdateTerminalInfo()
 	Eigen::VectorXd p_save = skel->getPositions();
 	Eigen::VectorXd v_save = skel->getVelocities();
 
-	//skel->setPositions(mTargetPositions);
-	//skel->computeForwardKinematics(true,false,false);
 
 	Eigen::Isometry3d root_diff = cur_root_inv * skel->getRootBodyNode()->getWorldTransform();
 	
@@ -340,7 +351,7 @@ UpdateTerminalInfo()
 	// 	mIsTerminal = true;
 	// 	terminationReason = 5;
 	// }
-	else if(!mRecord && mCurrentFrame > mReferenceManager->GetPhaseLength()*10) { // this->mBVH->GetMaxFrame() - 1.0){
+	else if(!mRecord && this->nTotalSteps > 600 ) { // this->mBVH->GetMaxFrame() - 1.0){
 		mIsTerminal = true;
 		terminationReason =  8;
 	}
@@ -364,66 +375,55 @@ GetHeadingReward()
 	int num_body_nodes = skel->getNumBodyNodes();
 
 
-	// double v_target = GetTargetSpeed();
-	// Eigen::Vector3d p_target = GetTargetPosition();
-
-	// // double sig_p = 1.0;
-	// // double sig_v = v_target * v_target / 4;
-	double sig_p = 1.5;
-	double sig_v = 1.0;
+	double sig_v = 0.5;
+	double sig_dir = 0.3;
 
 
-	// Eigen::Isometry3d T_ref = this->getReferenceTransform();
-	// Eigen::Isometry3d T_ref_inv = T_ref.inverse();
-	// Eigen::Matrix3d R_ref_inv = T_ref_inv.linear();
+	// double target_speed = this->mTargetSpeed;
 
-	// Eigen::Vector3d p_COM = T_ref_inv*skel->getCOM();
-	// Eigen::Vector3d v_COM = R_ref_inv*skel->getCOMLinearVelocity();
+	// Eigen::Vector3d com = skel->getCOM();
+	// double step_dur = skel->getTimeStep();
+	// Eigen::Vector3d avg_vel = (com - this->COM_prev) / step_dur;
 
-	// Eigen::Vector3d p_diff = p_target - p_COM;
-	// p_diff[1] = 0.0;
+	// double avg_speed = this->target_dir.dot(avg_vel);
 
-	// double v_diff_reward = 0;
-	
-	// if (p_diff.norm() < this->dist_threshold)
+	// double vel_reward = 0;
+	// double dir_reward = 0;
+	// if (avg_speed > 0.0)
 	// {
-	// 	v_diff_reward = 1.0;
-	// }
-	// else{
-
-	// 	double v = v_COM.dot(p_diff.normalized());
-	// 	double v_diff = v_target - v;
-
-	// 	if(v<0) v_diff_reward=0;
-	// 	else{
-	// 		v_diff_reward = std::exp(-pow(v_diff,2)/(sig_v*sig_v));
-	// 	}
+	// 	double vel_err = target_speed - avg_speed;
+	// 	vel_reward = std::exp(-sig_v * vel_err * vel_err);
 	// }
 
 
-	double tar_speed = this->mTargetSpeed;
-	Eigen::Vector3d tar_dir = (this->target_pos - skel->getCOM()).normalized();
+	// this->COM_prev = com;
+	// double rew_v = vel_reward;
+
+
+	double target_speed = this->mTargetSpeed;
 
 	Eigen::Vector3d com = skel->getCOM();
 	double step_dur = skel->getTimeStep();
-	Eigen::Vector3d avg_vel = (com - this->COM_prev) / step_dur;
+	Eigen::Vector3d vel = skel->getCOMLinearVelocity();
+	vel[1]=0;
+	Eigen::Vector3d vel_dir = vel.normalized();
+	double avg_speed = vel.norm();
+	
 
-	double avg_speed = tar_dir.dot(avg_vel);
+	double dir_err = this->target_dir.dot(vel_dir) -1;
+
+	double dir_reward = std::exp(-dir_err * dir_err/(sig_dir * sig_dir));
 
 	double vel_reward = 0;
 	if (avg_speed > 0.0)
 	{
-		double vel_err = tar_speed - avg_speed;
-		vel_reward = std::exp(-sig_v * vel_err * vel_err);
+		double vel_err = target_speed - avg_speed;
+		vel_reward = std::exp(- vel_err * vel_err / (sig_v * sig_v));
 	}
 
-
-	this->COM_prev = com;
-	// double rew_p = exp_of_squared(p_diff,sig_p);
-	double rew_v = vel_reward;
+	double rew_v = vel_reward * dir_reward;
 
 
-	// double rew_p_w = 0.6;
 	// double rew_v_w = 0.4;
 
 	// double reward = rew_p_w * rew_p + rew_v_w * rew_v;
@@ -617,28 +617,28 @@ GetState()
 
 
 		Eigen::Vector4d out_goal;
-		Eigen::Vector3d pos_diff = this->target_pos - skel->getCOM();
+		Eigen::Vector3d pos_diff = this->target_dir;
 		//pos_diff[1] = 0;
 
-		double tar_dist = pos_diff.norm();
-		if (tar_dist > 0.0001)
-		{
-			pos_diff = T_ref * pos_diff;
-			pos_diff /= tar_dist;
-		}
-		else
-		{
-			pos_diff = {0,0,0};
-		}
+		// double tar_dist = pos_diff.norm();
+		// if (tar_dist > 0.0001)
+		// {
+		// 	pos_diff = T_ref * pos_diff;
+		// 	pos_diff /= tar_dist;
+		// }
+		// else
+		// {
+		// 	pos_diff = {0,0,0};
+		// }
 
 
 
-		if(pos_diff.norm()<0.00001){
-			pos_diff= {0,0,1.0};
-		}
-		else{
-			pos_diff = pos_diff.normalized();	
-		}
+		// if(pos_diff.norm()<0.00001){
+		// 	pos_diff= {0,0,1.0};
+		// }
+		// else{
+		// 	pos_diff = pos_diff.normalized();	
+		// }
 
 		out_goal[0] = pos_diff[0];
 		out_goal[1] = pos_diff[1];
@@ -792,26 +792,11 @@ RecordVel(){
 
 Eigen::VectorXd
 Controller::
-GetAgentParam(){
+GetAgentParam(const Eigen::Matrix3d R_ref_inv){
 	auto& skel = this->mCharacter->GetSkeleton();
-	Eigen::VectorXd p_save = skel->getPositions();
+	Eigen::Vector3d v_curr = skel->getCOMLinearVelocity();
 
-	skel->setPositions(this->mPrevPosition);
-
-	Eigen::Isometry3d T_ref = this->getReferenceTransform();
-	Eigen::Isometry3d T_ref_inv = T_ref.inverse();
-	Eigen::Matrix3d R_ref_inv = T_ref_inv.linear();
-
-	Eigen::Vector3d v_com1 = R_ref_inv*skel->getCOMLinearVelocity();
-
-	
-	skel->setPositions(this->mPPrevPosition);
-	Eigen::Vector3d v_com0 = R_ref_inv*skel->getCOMLinearVelocity();
-
-	skel->setPositions(p_save);
-	Eigen::Vector3d v_com2 = R_ref_inv*skel->getCOMLinearVelocity();
-
-	Eigen::Vector3d dir = (v_com0 + 2* v_com1 + v_com2)/4;
+	Eigen::Vector3d dir = R_ref_inv * (this->mPrevCOMvel + v_curr)/2;
 	if(dir.norm()<0.00001){
 		dir ={0,1.0,0.0};
 	}
@@ -829,6 +814,7 @@ Controller::
 GetExpertParam(){
 	auto& skel = this->mCharacter->GetSkeleton();
 	Eigen::VectorXd p_save = skel->getPositions();
+	Eigen::Vector3d v_curr = skel->getCOMLinearVelocity();
 
 	int n1 = mCurrentFrame-1 > 0 ? mCurrentFrame-1 : mCurrentFrame;
 	Motion p_v_target = mReferenceManager->GetMotion(n1);
@@ -839,20 +825,17 @@ GetExpertParam(){
 	Eigen::Isometry3d T_ref_inv = T_ref.inverse();
 	Eigen::Matrix3d R_ref_inv = T_ref_inv.linear();
 
-	Eigen::Vector3d v_com1 = R_ref_inv*skel->getCOMLinearVelocity();
+	Eigen::Vector3d v_prev = skel->getCOMLinearVelocity();
 
-	int n0 = n1-1 > 0 ? n1-1 : n1;
-	p_v_target = mReferenceManager->GetMotion(n0);
-	p_ref = p_v_target.GetPosition();
-	skel->setPositions(p_ref);
+	// int n0 = n1-1 > 0 ? n1-1 : n1;
+	// p_v_target = mReferenceManager->GetMotion(n0);
+	// p_ref = p_v_target.GetPosition();
+	// skel->setPositions(p_ref);
 
-	Eigen::Vector3d v_com0 = R_ref_inv*skel->getCOMLinearVelocity();
+	// Eigen::Vector3d v_com0 = R_ref_inv*skel->getCOMLinearVelocity();
 	
-
 	skel->setPositions(p_save);
-	Eigen::Vector3d v_com2 = R_ref_inv*skel->getCOMLinearVelocity();
-
-	Eigen::Vector3d dir = (v_com0 + 2* v_com1 + v_com2)/4;
+	Eigen::Vector3d dir = R_ref_inv* (v_prev + v_curr)/2;
 	if(dir.norm()<0.00001){
 		dir ={0,1.0,0.0};
 	}
@@ -861,30 +844,6 @@ GetExpertParam(){
 	out[4] = dir.norm();
 	
 	return out;
-}
-
-
-bool
-Controller::
-FollowBvh()
-{	
-	if(this->mIsTerminal)
-		return false;
-	auto& skel = mCharacter->GetSkeleton();
-
-	Motion p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
-	mTargetPositions = p_v_target.GetPosition();
-	mTargetVelocities = p_v_target.GetVelocity();
-
-	for(int i=0;i<this->mSimPerCon;i++)
-	{
-		skel->setPositions(mTargetPositions);
-		skel->setVelocities(mTargetVelocities);
-		skel->computeForwardKinematics(true, true, false);
-	}
-	this->mCurrentFrame += 1;
-	this->nTotalSteps += 1;
-	return true;
 }
 
 void 
@@ -897,6 +856,7 @@ Reset(bool RSI)
 	mReferenceManager->SelectMotion(motion_it);
 	auto& skel = this->mCharacter->GetSkeleton();
 	int n = skel->getNumBodyNodes();
+	int dof = this->mCharacter->GetSkeleton()->getNumDofs(); 
 
 	skel->clearConstraintImpulses();
 	skel->clearInternalForces();
@@ -906,6 +866,9 @@ Reset(bool RSI)
 	if(RSI) {
 		this->mCurrentFrame = (int) dart::math::Random::uniform(0.0, mReferenceManager->GetPhaseLength()-5.0);
 	}
+	this->mStartFrame = this->mCurrentFrame;
+	this->nTotalSteps = 0;
+	this->mTimeElapsed = 0;
 
 	Motion p_v_target = mReferenceManager->GetMotion(mCurrentFrame);
 	this->mTargetPositions = p_v_target.GetPosition();
@@ -914,19 +877,6 @@ Reset(bool RSI)
 	skel->setPositions(mTargetPositions);
 	skel->setVelocities(mTargetVelocities);
 
-	this->mPrevPosition = mTargetPositions;
-	this->mPPrevPosition = mTargetPositions;
-	this->COM_prev = skel->getCOM();
-
-	this->mStartFrame = this->mCurrentFrame;
-	this->nTotalSteps = 0;
-	this->mTimeElapsed = 0;
-
-
-	this->mPPrevAgentPose.setZero();
-	this->mPPrevAgentVel.setZero();
-	this->mPPrevAgentPose.resize(3*3*n + mEndEffectors.size()*3);
-	this->mPPrevAgentVel.resize(2*3*n);
 
 	this->mPrevAgentPose.setZero();
 	this->mPrevAgentVel.setZero();
@@ -936,14 +886,20 @@ Reset(bool RSI)
 	this->mPrevAgentPose = RecordPose();
 	this->mPrevAgentVel = RecordVel();
 
-	this->mPPrevAgentPose = this->mPrevAgentPose;
-	this->mPPrevAgentVel = this->mPrevAgentVel;
 
-	this->mPPrevExpertPose = this->mPPrevAgentPose;
-	this->mPPrevExpertVel = this->mPPrevAgentVel;
+	// this->mTargetPositions = Eigen::VectorXd::Zero(dof);
+	// this->mTargetVelocities = Eigen::VectorXd::Zero(dof);
+	// this->mTargetPositions[4] = mReferenceManager->GetInitialHeight()+0.03;
+
+	// skel->setPositions(mTargetPositions);
+	// skel->setVelocities(mTargetVelocities);
+
+	this->mPrevCOMvel = skel->getCOMLinearVelocity();
+	// this->mPPrevCOMvel = mPrevCOMvel;
+	this->COM_prev = skel->getCOM();
+
 	this->mPrevExpertPose = this->mPrevAgentPose;
 	this->mPrevExpertVel = this->mPrevAgentVel;
-
 
 	this-> mNumFeature = (mPrevAgentPose.rows()+mPrevAgentVel.rows())*2 + mNumMotionParam;
 	this-> mAgentFeatureSet.setZero();
@@ -956,19 +912,22 @@ Reset(bool RSI)
 	this->mIsTerminal = false;
 
 	this->mStartRoot = this->mCharacter->GetSkeleton()->getPositions().segment<3>(3);
+	this->target_dir = skel->getCOMLinearVelocity();
+	this->target_dir[1]=0;
+	this->theta= 0;
+	this->theta_prev=0;
+	this->speed =1.0;
 
-
-	SetRandomTarget(this->mStartRoot);
-
+	SetTarget(this->mStartRoot, !mRecord);
 
 }
 
 void
 Controller::
-SetRandomTarget(const Eigen::Vector3d& root_pos){
+SetTarget(const Eigen::Vector3d& root_pos, bool random){
 	double time_min = 1;
 	double time_max = 5;
-	this->mTargetSpeed = 0.5 + (2.5-0.5) * double(std::rand())/RAND_MAX;
+	
 
 	this->mMinTargetDist = 1.0;
 	this->mMaxTargetDist = 3.0;
@@ -976,20 +935,47 @@ SetRandomTarget(const Eigen::Vector3d& root_pos){
  	
 	std::srand(std::time(NULL));
 
-	double dist = mMinTargetDist + (mMaxTargetDist-mMinTargetDist) * double(std::rand())/RAND_MAX;
-	double theta = -M_PI + 2 * M_PI * double(std::rand())/RAND_MAX;
-
-	bool sharp_turn = double(std::rand())/RAND_MAX < 0.025;
-	if(!sharp_turn){
-		theta = theta< M_PI/6 ? theta : M_PI/6;
-		theta = theta> -M_PI/6 ? theta : -M_PI/6;
+	if(random){
+		this->mTargetSpeed = 0.5 + (1.5-0.5) * double(std::rand())/RAND_MAX;
 	}
-	this->target_pos[0] = root_pos[0] + dist * std::sin(theta);
-	this->target_pos[1] = 0.6 + (1.2-0.6) * double(std::rand())/RAND_MAX;
-	this->target_pos[2] = root_pos[2] + dist * std::cos(theta);
+	else{
+		this->mTargetSpeed = this->speed;
+	}
+
+	double dist = mMinTargetDist + (mMaxTargetDist-mMinTargetDist) * double(std::rand())/RAND_MAX;
+	if(random){
+		float delta_th= -M_PI + 2 * M_PI * double(std::rand())/RAND_MAX;
+	
+
+		bool sharp_turn = double(std::rand())/RAND_MAX < 0.02;
+		if(!sharp_turn){
+			delta_th = -M_PI/6 + M_PI/3 * double(std::rand())/RAND_MAX;
+		}
+		this->theta += delta_th;
+	}
+
+	this->target_rot = Eigen::AngleAxisd(0, Eigen::Vector3d::UnitX())
+	  * Eigen::AngleAxisd(theta, Eigen::Vector3d::UnitY())
+	  * Eigen::AngleAxisd(0, Eigen::Vector3d::UnitZ());
+	
 
 
 
+	// this->target_pos[0] = std::sin(this->theta);
+	// if(random)
+	// 	this->target_pos[1] = -0.2+0.4 * double(std::rand())/RAND_MAX;
+	// else
+	// 	this->target_pos[1] = this->height;
+	// this->target_pos[2] = std::cos(this->theta);
+
+}
+
+void
+Controller::
+SetParam(const float new_theta, const float new_height, const float new_speed){
+	this->theta = new_theta;
+	this->height = new_height;
+	this->speed = new_speed;
 }
 
 

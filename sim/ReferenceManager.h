@@ -61,6 +61,7 @@ public:
 	int GetPhaseLength(int id) {return this->mMotionPhases[id]; }
 	int GetTotalFrameperMotion() {return this->mFramePerMotion;}
 	int GetDOF() {return mDOF;}
+	int GetInitialHeight() {return this->mPoseHeight;}
 
 	// void ResetOptimizationParameters(bool reset_displacement=true);
 	void setRecord(){mRecord = true;}
@@ -106,7 +107,7 @@ protected:
 	std::vector<std::vector<Motion>> mMotions_container;
 	std::vector<Motion> mMotions_gen_adaptive;
 
-
+	int mPoseHeight;
 	int mNumPose;
 	int motion_it;
 	std::vector<std::string> motion_type;

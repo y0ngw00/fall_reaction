@@ -51,9 +51,11 @@ class Actor(object):
 	            kernel_regularizer=regularizer
 			)
 			# logstd = tf.Variable(initial_value = np.zeros(num_actions), name='_logstd', dtype=tf.float32, trainable=True)
-			self.logstdvar = logstd = tf.get_variable(name='std', 
-				shape=[num_actions], initializer=tf.constant_initializer(-2.3)
-			)
+			# self.logstdvar = logstd = tf.get_variable(name='std', 
+			# 	shape=[num_actions], initializer=tf.constant_initializer(-2.3)
+
+			logstd = tf.constant(-2.3,dtype=tf.float32,name='std', 
+			 	shape=[num_actions])
 
 			sigma = tf.exp(logstd)
 

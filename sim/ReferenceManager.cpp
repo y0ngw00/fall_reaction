@@ -13,7 +13,8 @@ ReferenceManager(Character* character)
 	this-> mBlendingInterval = 10;
 
 	this-> smooth_time = 10;
-	this->mFramePerMotion = 400;
+	this->mFramePerMotion = 300;
+	this-> mPoseHeight =0;
 
 	
 	mMotions_raw.clear();
@@ -129,6 +130,10 @@ LoadMotionFromBVH(std::string filename)
 			Eigen::VectorXd pos = Eigen::VectorXd::Zero(dof);
 			//Set p
 			bvh->SetMotion(t);
+			if(i==0){
+				Eigen::Vector3d root = bvh->GetRootCOM();
+				if(root[1]>this->mPoseHeight) this->mPoseHeight=root[1];
+			}
 
 			for(auto jnt :bvhMap)
 			{
@@ -214,13 +219,20 @@ LoadMotionFromBVH(std::string filename)
 
 		for(int i = 0; i < mPhaseLength; i++) {
 			mMotions_phase.push_back(Motion(mMotions_raw[i]));
-		 }
-		 
+	 	}
+		
 		delete bvh;
-		this->GenerateMotionsFromSinglePhase(this->mFramePerMotion, true, mMotions_phase, this->mMotions_container);
+		// if(mPhaseLength < this->mFramePerMotion)
+		// this->GenerateMotionsFromSinglePhase(this->mFramePerMotion, true, mMotions_phase, this->mMotions_container);
+		// else
+		mMotions_container.push_back(mMotions_phase);
+
+		// std::vector<Motion> mMotions_rev = mMotions_phase;
+		// std::reverse(mMotions_rev.begin(), mMotions_rev.end());
+		// mMotions_container.push_back(mMotions_rev);
 		it++;
 	}
-	SelectMotion(0);
+	// SelectMotion(0);
 
 	this->mNumPose = num_pose;
 
@@ -278,7 +290,6 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion>& p_ph
 	 	else {
 	 		Eigen::VectorXd pos;
 			if(phase == 0) { //The End of unit motion
-				std::vector<std::tuple<std::string, Eigen::Vector3d, Eigen::Vector3d>> constraints;
 				
 				skel->setPositions(p_gen.back().GetPosition());
 				//skel->computeForwardKinematics(true,false,false);
@@ -300,21 +311,21 @@ GenerateMotionsFromSinglePhase(int frames, bool blend, std::vector<Motion>& p_ph
 				Eigen::Isometry3d T0_phase_gen = T0_gen* T0_phase.inverse();
 
 				// Blending motion
-				if(phase < smooth_time){
-					Eigen::Quaterniond Q0_phase_gen(T0_phase_gen.linear());
-					double slerp_t = (double)phase/smooth_time; 
-					slerp_t = 0.5*(1-cos(M_PI*slerp_t)); //smooth slerp t [0,1]
+				// if(phase < smooth_time){
+				// 	Eigen::Quaterniond Q0_phase_gen(T0_phase_gen.linear());
+				// 	double slerp_t = (double)phase/smooth_time; 
+				// 	slerp_t = 0.5*(1-cos(M_PI*slerp_t)); //smooth slerp t [0,1]
 					
-					Eigen::Quaterniond Q_blend = Q0_phase_gen.slerp(slerp_t, Eigen::Quaterniond::Identity());
-					T0_phase_gen.linear() = Eigen::Matrix3d(Q_blend);
-					T_current = T0_phase_gen* T_current;
-				}
-				else{
-					// Not blend motion. Actually this is not neccessary
-					T0_phase_gen.linear() = Eigen::Matrix3d::Identity(); 
-					T_current = T0_phase_gen* T_current;
-				}
-
+				// 	Eigen::Quaterniond Q_blend = Q0_phase_gen.slerp(slerp_t, Eigen::Quaterniond::Identity());
+				// 	T0_phase_gen.linear() = Eigen::Matrix3d(Q_blend);
+				// 	T_current = T0_phase_gen* T_current;
+				// }
+				// else{
+				// 	// Not blend motion. Actually this is not neccessary
+				// 	T0_phase_gen.linear() = Eigen::Matrix3d::Identity(); 
+				// 	T_current = T0_phase_gen* T_current;
+				// }
+				T_current = T0_gen* T0_phase.inverse() * T_current;
 				pos.head<6>() = dart::dynamics::FreeJoint::convertToPositions(T_current);
 			}
 
